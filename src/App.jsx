@@ -193,7 +193,7 @@ function Login({onLogin,users,logoUrl}){
 // ── SIDEBAR (CFC green) ───────────────────────────────────────
 function Sidebar({user,page,setPage,onLogout,logoUrl}){
   const [benOpen,setBen]=useState(true); const [sirOpen,setSir]=useState(false);
-  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>nav(p)}
+  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)}
     style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,
       color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,
       background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}>
@@ -290,11 +290,19 @@ function Dashboard({bens,user,onNavigate}){
 // ── BENEFICIARY LIST ──────────────────────────────────────────
 function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const [search,setSearch]=useState("");
-  const isGender = initialFilter.stat==="Male"||initialFilter.stat==="Female";
-  const [compF,setCompF]=useState(initialFilter.comp?String(initialFilter.comp):"all");
+  const [compF,setCompF]=useState("all");
   const [commF,setCommF]=useState("all");
-  const [statF,setStatF]=useState(!isGender&&initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
-  const [gendF,setGendF]=useState(isGender?initialFilter.stat:"all");
+  const [statF,setStatF]=useState("all");
+  const [gendF,setGendF]=useState("all");
+
+  // Apply dashboard filters when they change
+  useEffect(()=>{
+    const isGender = initialFilter.stat==="Male"||initialFilter.stat==="Female";
+    setCompF(initialFilter.comp?String(initialFilter.comp):"all");
+    setStatF(!isGender&&initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
+    setGendF(isGender?initialFilter.stat:"all");
+    setSearch("");
+  },[initialFilter.comp, initialFilter.stat]);
   const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
