@@ -89,13 +89,7 @@ const COMPONENTS = [
 ];
 
 // ── Summary strip (CFC colours) ───────────────────────────────
-const STATS = [
-  { label:"Total Beneficiaries", icon:"👨‍👩‍👧‍👦", bg:"#1A252F" },
-  { label:"Active",              icon:"🟢",       bg:"#27AE60" },
-  { label:"Completed",           icon:"🎯",       bg:"#2980B9" },
-  { label:"Male",                icon:"👨",       bg:"#8E44AD" },
-  { label:"Female",              icon:"👩",       bg:"#E67E22" },
-];
+
 
 const AC=["#E74C3C","#2980B9","#F39C12","#27AE60","#E67E22","#8E44AD","#16A085"];
 function aColor(n=""){let h=0;for(let c of n)h=(h*31+c.charCodeAt(0))%AC.length;return AC[h];}
