@@ -1,13 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// ── Supabase (data only — no auth) ───────────────────────────
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
-// ── Demo users (login stays simple) ──────────────────────────
 const DEMO_USERS = [
   { id:"admin-1", email:"admin@ogb.org",  password:"admin123", name:"Mark Effah Yeboah", role:"Admin",            avatar:"MY" },
   { id:"officer-1", email:"kofi@ogb.org", password:"pass123",  name:"Kofi Mensah",       role:"Programme Officer", avatar:"KM" },
@@ -22,7 +20,7 @@ const CSS = `
   ::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
   .nav-item:hover { background: rgba(255,255,255,0.10) !important; }
   .nav-sub:hover { background: rgba(255,107,107,0.18) !important; color:#fff !important; }
-  .card-hover:hover { transform: translateY(-5px); box-shadow: 0 12px 32px rgba(0,0,0,0.18) !important; }
+  .card-hover:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important; }
   .btn-hover:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .row-hover:hover { background: #EBF8FF !important; }
   .tab-btn:hover { background: #fff !important; color: #1A365D !important; }
@@ -63,7 +61,7 @@ const Lbl=({c})=><div style={{fontSize:11,fontWeight:700,color:T.slate,textTrans
 const FBox=({v})=><div style={{background:T.off,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T.navy,minHeight:38}}>{v||"—"}</div>;
 const Btn=({children,onClick,variant="primary",style:sx})=>{
   const b={padding:"10px 22px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"'Source Sans 3',sans-serif",transition:"all 0.18s",...sx};
-  const v=variant==="primary"?{background:T.coral,color:T.white}:variant==="navy"?{background:T.navy,color:T.white}:{background:T.off,color:T.navy,border:`1px solid ${T.greyM}`};
+  const v=variant==="primary"?{background:T.coral,color:T.white}:variant==="navy"?{background:T.navy,color:T.white}:variant==="danger"?{background:T.red,color:T.white}:{background:T.off,color:T.navy,border:`1px solid ${T.greyM}`};
   return <button className="btn-hover" style={{...b,...v}} onClick={onClick}>{children}</button>;
 };
 const SH=({children})=>(<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><span style={{fontSize:12,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:2}}>{children}</span><div style={{flex:1,height:1,background:T.greyM}}/></div>);
@@ -76,26 +74,25 @@ const FI=({label,value,onChange,type="text",options,full,readOnly,placeholder})=
   </div>
 );
 
-function Logo({size=40,color=T.navy}){return(<svg width={size} height={size} viewBox="0 0 100 100" fill="none"><path d="M50 18 C44 8 28 4 18 14 C8 24 10 42 22 50 C10 58 8 76 18 86 C28 96 44 92 50 82 C56 92 72 96 82 86 C92 76 90 58 78 50 C90 42 92 24 82 14 C72 4 56 8 50 18Z" stroke={color} strokeWidth="6" fill="none" strokeLinejoin="round" strokeLinecap="round"/><circle cx="50" cy="13" r="4" fill={color}/><circle cx="50" cy="87" r="4" fill={color}/><circle cx="13" cy="50" r="4" fill={color}/><circle cx="87" cy="50" r="4" fill={color}/></svg>);}
+function Logo({size=40,color=T.navy,url=null}){
+  if(url) return <img src={url} alt="logo" style={{width:size,height:size,objectFit:"contain",borderRadius:6}}/>;
+  return(<svg width={size} height={size} viewBox="0 0 100 100" fill="none"><path d="M50 18 C44 8 28 4 18 14 C8 24 10 42 22 50 C10 58 8 76 18 86 C28 96 44 92 50 82 C56 92 72 96 82 86 C92 76 90 58 78 50 C90 42 92 24 82 14 C72 4 56 8 50 18Z" stroke={color} strokeWidth="6" fill="none" strokeLinejoin="round" strokeLinecap="round"/><circle cx="50" cy="13" r="4" fill={color}/><circle cx="50" cy="87" r="4" fill={color}/><circle cx="13" cy="50" r="4" fill={color}/><circle cx="87" cy="50" r="4" fill={color}/></svg>);
+}
 
 function Topbar({title,sub}){return(<div style={{background:T.white,borderBottom:`1px solid ${T.greyM}`,padding:"0 32px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}</div><div style={{display:"flex",alignItems:"center",gap:14}}><div style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🔔</div><div style={{fontSize:12,color:T.grey}}>{new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div></div></div>);}
 
-// ── LOGIN ─────────────────────────────────────────────────────
-function Login({onLogin,users}){
+function Login({onLogin,users,logoUrl}){
   const [email,setEmail]=useState("");
   const [pass,setPass]=useState("");
   const [err,setErr]=useState("");
-
   function go(){
     const u=users.find(u=>u.email.toLowerCase()===email.toLowerCase()&&u.password===pass);
-    if(u){setErr("");onLogin(u);}
-    else setErr("Invalid email or password. Please try again.");
+    if(u){setErr("");onLogin(u);}else setErr("Invalid email or password.");
   }
-
   return(<div style={{minHeight:"100vh",background:`linear-gradient(135deg,${T.navy} 0%,${T.slate} 55%,${T.navyMid} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{background:T.white,borderRadius:20,padding:"44px 40px",width:400,boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
-        <Logo size={56} color={T.navy}/>
+        <Logo size={56} color={T.navy} url={logoUrl}/>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:T.navy,marginTop:10}}>OGB App</div>
         <div style={{fontSize:12,color:T.grey,marginTop:4}}>LYSBF · Community Youth Empowerment Programme</div>
       </div>
@@ -110,14 +107,13 @@ function Login({onLogin,users}){
   </div>);
 }
 
-// ── SIDEBAR ───────────────────────────────────────────────────
-function Sidebar({user,page,setPage,onLogout}){
+function Sidebar({user,page,setPage,onLogout,logoUrl}){
   const [benOpen,setBen]=useState(true);
   const [sirOpen,setSir]=useState(false);
   const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)} style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,color:page===p?"#fff":"rgba(255,255,255,0.7)",fontWeight:page===p?700:400,fontSize:sub?12:13,background:page===p?(sub?"rgba(255,107,107,0.3)":"rgba(255,255,255,0.14)"):"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{fontSize:sub?14:16,minWidth:18,textAlign:"center"}}>{icon}</span><span>{label}</span></div>);
   const G=({label,icon,open,setOpen,children})=>(<><div className="nav-item" onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.78)",fontSize:13,marginBottom:2,transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:16,minWidth:18,textAlign:"center"}}>{icon}</span><span>{label}</span></span><span style={{fontSize:10,opacity:0.6}}>{open?"▲":"▼"}</span></div>{open&&children}</>);
   return(<div style={{width:248,minHeight:"100vh",background:`linear-gradient(180deg,${T.navy} 0%,${T.slate} 100%)`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:100,overflowY:"auto"}}>
-    <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color={T.white}/><div><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:T.white}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.45)",letterSpacing:2,textTransform:"uppercase"}}>LYSBF · CYEP</div></div></div></div>
+    <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.1)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color={T.white} url={logoUrl}/><div><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:T.white}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.45)",letterSpacing:2,textTransform:"uppercase"}}>LYSBF · CYEP</div></div></div></div>
     <div style={{padding:"14px 10px",flex:1}}>
       <NI label="Dashboard" icon="📊" p="dashboard"/>
       <G label="Beneficiaries" icon="👥" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/><NI label="Add" icon="➕" p="ben-add" sub/></G>
@@ -129,25 +125,42 @@ function Sidebar({user,page,setPage,onLogout}){
   </div>);
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────
+// ── DASHBOARD (improved cards + summary colors) ───────────────
 function Dashboard({bens,user}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
-  const stats=[{label:"Total Beneficiaries",v:vis.length,icon:"👥",color:T.navy},{label:"Active",v:vis.filter(b=>b.status==="Active").length,icon:"✅",color:T.greenM},{label:"Completed",v:vis.filter(b=>b.status==="Completed").length,icon:"🏁",color:T.blue},{label:"Male",v:vis.filter(b=>b.gender==="Male").length,icon:"♂",color:T.slate},{label:"Female",v:vis.filter(b=>b.gender==="Female").length,icon:"♀",color:T.coral}];
+  const stats=[
+    {label:"Total Beneficiaries",v:vis.length,          icon:"👥", bg:"#1A365D", color:"#FFFFFF"},
+    {label:"Active",             v:vis.filter(b=>b.status==="Active").length,    icon:"✅", bg:"#276749", color:"#FFFFFF"},
+    {label:"Completed",          v:vis.filter(b=>b.status==="Completed").length, icon:"🏁", bg:"#2B6CB0", color:"#FFFFFF"},
+    {label:"Male",               v:vis.filter(b=>b.gender==="Male").length,      icon:"♂",  bg:"#553C9A", color:"#FFFFFF"},
+    {label:"Female",             v:vis.filter(b=>b.gender==="Female").length,    icon:"♀",  bg:"#C05621", color:"#FFFFFF"},
+  ];
   return(<div className="fade-in"><Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
-        {stats.map(s=>(<div key={s.label} style={{background:T.white,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 1px 6px rgba(0,0,0,0.07)",border:`1px solid ${T.greyM}`}}><div style={{fontSize:24,marginBottom:6}}>{s.icon}</div><div style={{fontSize:30,fontWeight:700,color:s.color,fontFamily:"'Playfair Display',serif"}}>{s.v}</div><div style={{fontSize:11,color:T.grey,marginTop:3,textTransform:"uppercase",letterSpacing:0.8}}>{s.label}</div></div>))}
+        {stats.map(s=>(<div key={s.label} style={{background:s.bg,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 3px 10px rgba(0,0,0,0.15)"}}>
+          <div style={{fontSize:22,marginBottom:6}}>{s.icon}</div>
+          <div style={{fontSize:30,fontWeight:700,color:s.color,fontFamily:"'Playfair Display',serif"}}>{s.v}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",marginTop:3,textTransform:"uppercase",letterSpacing:0.8}}>{s.label}</div>
+        </div>))}
       </div>
       <SH>Beneficiaries by Programme Component</SH>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
-        {COMPONENTS.map(c=>{const count=vis.filter(b=>b.component_id===c.id).length;return(<div key={c.id} className="card-hover" style={{borderRadius:14,padding:"22px 18px",background:`linear-gradient(145deg,${c.color} 0%,${c.color}DD 100%)`,color:T.white,cursor:"pointer",boxShadow:"0 3px 10px rgba(0,0,0,0.12)",transition:"all 0.22s"}}><div style={{fontSize:36,marginBottom:8}}>{c.icon}</div><div style={{fontSize:11,fontWeight:700,opacity:0.88,lineHeight:1.4,marginBottom:8}}>{c.name}</div><div style={{fontSize:42,fontWeight:700,fontFamily:"'Playfair Display',serif",lineHeight:1}}>{count}</div><div style={{fontSize:11,opacity:0.75,marginTop:4}}>Total Beneficiaries</div></div>);})}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+        {COMPONENTS.map(c=>{const count=vis.filter(b=>b.component_id===c.id).length;return(
+          <div key={c.id} className="card-hover" style={{borderRadius:12,padding:"16px 18px",background:T.white,border:`1.5px solid ${c.color}22`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",transition:"all 0.22s",display:"flex",alignItems:"center",gap:14}}>
+            <div style={{width:44,height:44,borderRadius:10,background:c.light,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{c.icon}</div>
+            <div>
+              <div style={{fontSize:11,color:T.grey,lineHeight:1.3,marginBottom:4}}>{c.name}</div>
+              <div style={{fontSize:26,fontWeight:700,color:c.color,fontFamily:"'Playfair Display',serif",lineHeight:1}}>{count}</div>
+              <div style={{fontSize:10,color:T.grey}}>beneficiaries</div>
+            </div>
+          </div>);})}
       </div>
     </div>
   </div>);
 }
 
-// ── BENEFICIARY LIST ──────────────────────────────────────────
 function BenList({bens,user,users,onView,onEdit,onSIR}){
   const [search,setSearch]=useState("");const [compF,setCompF]=useState("all");const [commF,setCommF]=useState("all");const [statF,setStatF]=useState("all");const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
@@ -192,7 +205,6 @@ function BenList({bens,user,users,onView,onEdit,onSIR}){
   </div>);
 }
 
-// ── PROFILE TABS ──────────────────────────────────────────────
 const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"❤️"},{k:"education",label:"Education",icon:"🎓"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"♿"},{k:"followups",label:"Follow-Ups",icon:"📝"},{k:"documents",label:"Documents",icon:"📁"}];
 
 function Profile({ben,user,users,onBack,onAddPost,onSIR}){
@@ -237,7 +249,6 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR}){
   </div>);
 }
 
-// ── SIR ───────────────────────────────────────────────────────
 function SIRView({ben,users,onBack}){
   if(!ben)return(<div className="fade-in"><Topbar title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📋</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click SIR to generate a report.</div></div></div>);
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
@@ -277,20 +288,16 @@ function SIRView({ben,users,onBack}){
   </div>);
 }
 
-// ── BEN FORM ──────────────────────────────────────────────────
 function BenForm({user,edit,users,onSave,onCancel}){
   const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"Eastern",district:"",city:"",area:"",physical_desc:"",address:"",community:"New Juaben North",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank);
   const [busy,setBusy]=useState(false);
-  const [msg,setMsg]=useState("");
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   const communities=["New Juaben North","Effiduase","Asokore","Oyoko","Kukurantumi","Old Estate","Zongo","Suhum","Akwadum","Dansuagya"];
   const officers=users.filter(u=>u.role!=="Admin").map(u=>({value:u.id,label:u.name}));
-
   return(<div className="fade-in"><Topbar title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}>
       <Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
-      {msg&&<div style={{background:msg.includes("✅")?T.greenL:T.redL,color:msg.includes("✅")?T.green:T.red,borderRadius:8,padding:"12px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
       <div style={{background:T.white,borderRadius:12,padding:"28px 32px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Basic Demographics</SH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:28}}>
@@ -337,12 +344,7 @@ function BenForm({user,edit,users,onSave,onCancel}){
           <FI label="Background Information" value={f.background} onChange={v=>s("background",v)} type="textarea"/>
         </div>
         <div style={{display:"flex",gap:12}}>
-          <Btn variant="primary" style={{opacity:busy?0.6:1}} onClick={async()=>{
-            if(!f.name.trim()){setMsg("Please enter the beneficiary name.");return;}
-            setBusy(true);setMsg("");
-            await onSave(f);
-            setBusy(false);
-          }}>{busy?"Saving...":edit?"Save Changes":"Register Beneficiary"}</Btn>
+          <Btn variant="primary" style={{opacity:busy?0.6:1}} onClick={async()=>{if(!f.name.trim())return;setBusy(true);await onSave(f);setBusy(false);}}>{busy?"Saving...":edit?"Save Changes":"Register Beneficiary"}</Btn>
           <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
         </div>
       </div>
@@ -350,43 +352,67 @@ function BenForm({user,edit,users,onSave,onCancel}){
   </div>);
 }
 
-// ── POSTS ─────────────────────────────────────────────────────
 function PostsPage({bens,user}){
   const mine=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
   return(<div className="fade-in"><Topbar title="Posts" sub="Your latest follow-up notes and updates"/>
     <div style={{padding:"24px 32px"}}>
-      {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet. Add follow-up notes from a beneficiary profile.</div>}
+      {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet.</div>}
       {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:T.white,borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||T.coral}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div><div style={{fontSize:12,color:T.grey}}>{p.date}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
     </div>
   </div>);
 }
 
-// ── USER MANAGEMENT ───────────────────────────────────────────
+// ── USER MANAGEMENT (with edit, delete, change password) ──────
 function UserMgmt({users,setUsers}){
   const [showAdd,setShowAdd]=useState(false);
+  const [editUser,setEditUser]=useState(null);
+  const [changePwUser,setChangePwUser]=useState(null);
   const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer"});
+  const [pwForm,setPwForm]=useState({newPw:"",confirmPw:""});
   const [msg,setMsg]=useState("");
   const s=(k,v)=>setForm(p=>({...p,[k]:v}));
 
   function addUser(){
     if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}
     if(users.find(u=>u.email===form.email)){setMsg("This email already exists.");return;}
-    const av=inits(form.name);
-    const newUser={id:`officer-${Date.now()}`,name:form.name,email:form.email,password:form.password,role:form.role,avatar:av};
+    const newUser={id:`officer-${Date.now()}`,name:form.name,email:form.email,password:form.password,role:form.role,avatar:inits(form.name)};
     setUsers(u=>[...u,newUser]);
     setMsg("✅ User account created successfully!");
     setForm({name:"",email:"",password:"",role:"Programme Officer"});
     setShowAdd(false);
   }
 
+  function saveEdit(){
+    if(!editUser.name||!editUser.email){setMsg("Name and email are required.");return;}
+    setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,role:editUser.role,avatar:inits(editUser.name)}:x));
+    setMsg("✅ User updated successfully!");
+    setEditUser(null);
+  }
+
+  function deleteUser(id){
+    if(!window.confirm("Are you sure you want to remove this user account?")) return;
+    setUsers(u=>u.filter(x=>x.id!==id));
+    setMsg("✅ User account removed.");
+  }
+
+  function changePassword(){
+    if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Password must be at least 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords do not match.");return;}
+    setUsers(u=>u.map(x=>x.id===changePwUser.id?{...x,password:pwForm.newPw}:x));
+    setMsg("✅ Password changed successfully!");
+    setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});
+  }
+
   return(<div className="fade-in"><Topbar title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div style={{fontSize:13,color:T.grey}}>{users.length} users registered</div>
-        <Btn variant="primary" onClick={()=>setShowAdd(!showAdd)}>+ Create User Account</Btn>
+        <Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User Account</Btn>
       </div>
       {msg&&<div style={{background:msg.includes("✅")?T.greenL:T.redL,color:msg.includes("✅")?T.green:T.red,borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
+
+      {/* Add User Form */}
       {showAdd&&<div style={{background:T.white,borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Create New User Account</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
@@ -395,16 +421,43 @@ function UserMgmt({users,setUsers}){
           <FI label="Temporary Password *" value={form.password} onChange={v=>s("password",v)} type="password"/>
           <FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer"]}/>
         </div>
-        <div style={{fontSize:11,color:T.grey,background:T.off,padding:"10px 14px",borderRadius:8,marginBottom:14}}>ℹ️ Share these credentials with the Programme Officer so they can log in.</div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={addUser}>Create Account</Btn><Btn variant="secondary" onClick={()=>setShowAdd(false)}>Cancel</Btn></div>
       </div>}
+
+      {/* Edit User Form */}
+      {editUser&&<div style={{background:T.white,borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Edit User — {editUser.name}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+          <FI label="Full Name *" value={editUser.name} onChange={v=>setEditUser(u=>({...u,name:v}))}/>
+          <FI label="Email Address *" value={editUser.email} onChange={v=>setEditUser(u=>({...u,email:v}))} type="email"/>
+          <FI label="Role" value={editUser.role} onChange={v=>setEditUser(u=>({...u,role:v}))} options={editUser.role==="Admin"?["Admin"]:["Programme Officer"]}/>
+        </div>
+        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={saveEdit}>Save Changes</Btn><Btn variant="secondary" onClick={()=>setEditUser(null)}>Cancel</Btn></div>
+      </div>}
+
+      {/* Change Password Form */}
+      {changePwUser&&<div style={{background:T.white,borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Change Password — {changePwUser.name}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+          <FI label="New Password *" value={pwForm.newPw} onChange={v=>setPwForm(p=>({...p,newPw:v}))} type="password"/>
+          <FI label="Confirm New Password *" value={pwForm.confirmPw} onChange={v=>setPwForm(p=>({...p,confirmPw:v}))} type="password"/>
+        </div>
+        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={changePassword}>Update Password</Btn><Btn variant="secondary" onClick={()=>setChangePwUser(null)}>Cancel</Btn></div>
+      </div>}
+
+      {/* Users Table */}
       <div style={{background:T.white,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
           <tbody>{users.map((u,i)=>(<tr key={u.id} style={{background:i%2===0?T.white:T.off,borderBottom:`1px solid ${T.greyL}`}}>
             <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:34,height:34,borderRadius:"50%",background:aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:T.white}}>{inits(u.name)}</div><span style={{fontWeight:700,fontSize:13,color:T.navy}}>{u.name}</span></div></td>
             <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
             <td style={{padding:"13px 16px"}}><span style={{background:u.role==="Admin"?"#FED7D7":"#BEE3F8",color:u.role==="Admin"?T.red:T.blue,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
+            <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6}}>
+              <button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF8FF",color:T.blue}}>✏️ Edit</button>
+              <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEFCBF",color:T.gold}}>🔑 Password</button>
+              {u.role!=="Admin"&&<button onClick={()=>deleteUser(u.id)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FED7D7",color:T.red}}>🗑 Remove</button>}
+            </div></td>
           </tr>))}</tbody>
         </table>
       </div>
@@ -412,19 +465,69 @@ function UserMgmt({users,setUsers}){
   </div>);
 }
 
-// ── SETTINGS ──────────────────────────────────────────────────
-function Settings(){
+// ── SETTINGS (with logo upload + change password) ─────────────
+function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
+  const fileRef=useRef();
+  const [pwForm,setPwForm]=useState({current:"",newPw:"",confirm:""});
+  const [msg,setMsg]=useState("");
+
+  function handleLogo(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>setLogoUrl(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  function changeMyPassword(){
+    const me=users.find(u=>u.id===user.id);
+    if(pwForm.current!==me.password){setMsg("Current password is incorrect.");return;}
+    if(pwForm.newPw.length<6){setMsg("New password must be at least 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirm){setMsg("New passwords do not match.");return;}
+    setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));
+    setMsg("✅ Your password has been changed successfully!");
+    setPwForm({current:"",newPw:"",confirm:""});
+  }
+
   return(<div className="fade-in"><Topbar title="Settings" sub="App configuration — Admin only"/>
-    <div style={{padding:"24px 32px"}}>
-      <div style={{background:T.white,borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
+    <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+
+      {/* Logo Upload */}
+      <div style={{background:T.white,borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <SH>App Logo</SH>
+        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",cursor:"pointer",background:T.off,marginBottom:14}} onClick={()=>fileRef.current.click()}>
+          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>Click to upload your logo</div><div style={{fontSize:11,color:T.greyM,marginTop:4}}>PNG, JPG or SVG recommended</div></div>}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogo}/>
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <Btn variant="primary" onClick={()=>fileRef.current.click()}>📷 Upload Logo</Btn>
+          {logoUrl&&<Btn variant="secondary" onClick={()=>setLogoUrl(null)}>Remove</Btn>}
+        </div>
+      </div>
+
+      {/* Official Website */}
+      <div style={{background:T.white,borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
-        <div style={{background:`linear-gradient(135deg,${T.navy},${T.slate})`,borderRadius:12,padding:"24px",textAlign:"center",color:T.white}}>
+        <div style={{background:`linear-gradient(135deg,${T.navy},${T.slate})`,borderRadius:12,padding:"24px",textAlign:"center",color:T.white,marginBottom:12}}>
           <div style={{fontSize:32,marginBottom:8}}>🌐</div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,marginBottom:4}}>LYSBF Official Website</div>
           <div style={{fontSize:12,opacity:0.75,marginBottom:16}}>lysbfoundation.com</div>
           <a href="https://lysbfoundation.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:T.coral,color:T.white,padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
         </div>
       </div>
+
+      {/* Change My Password */}
+      <div style={{background:T.white,borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <SH>Change My Password</SH>
+        {msg&&<div style={{background:msg.includes("✅")?T.greenL:T.redL,color:msg.includes("✅")?T.green:T.red,borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13}}>{msg}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16}}>
+          <FI label="Current Password" value={pwForm.current} onChange={v=>setPwForm(p=>({...p,current:v}))} type="password"/>
+          <FI label="New Password" value={pwForm.newPw} onChange={v=>setPwForm(p=>({...p,newPw:v}))} type="password"/>
+          <FI label="Confirm New Password" value={pwForm.confirm} onChange={v=>setPwForm(p=>({...p,confirm:v}))} type="password"/>
+        </div>
+        <Btn variant="navy" onClick={changeMyPassword}>Update My Password</Btn>
+      </div>
+
+      {/* App Info */}
       <div style={{background:T.white,borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Information</SH>
         {[["App Name","OGB App"],["Version","2.0.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
@@ -433,7 +536,6 @@ function Settings(){
   </div>);
 }
 
-// ── POST MODAL ────────────────────────────────────────────────
 function PostModal({ben,user,onSave,onClose}){
   const [text,setText]=useState("");const [busy,setBusy]=useState(false);
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
@@ -449,7 +551,6 @@ function PostModal({ben,user,onSave,onClose}){
   </div>);
 }
 
-// ── ROOT APP ──────────────────────────────────────────────────
 export default function App(){
   const [user,setUser]=useState(null);
   const [loading,setLoading]=useState(true);
@@ -460,18 +561,15 @@ export default function App(){
   const [editBen,setEdit]=useState(null);
   const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null);
+  const [logoUrl,setLogoUrl]=useState(null);
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
   },[]);
 
-  // Load beneficiaries from Supabase on mount
   useEffect(()=>{
     async function load(){
-      try {
-        const {data,error}=await supabase.from("beneficiaries").select("*, posts(*)").order("name");
-        if(!error&&data) setBens(data);
-      } catch(e){ console.log("Supabase load error:",e); }
+      try{const {data,error}=await supabase.from("beneficiaries").select("*, posts(*)").order("name");if(!error&&data)setBens(data);}catch(e){console.log("Load error:",e);}
       setLoading(false);
     }
     load();
@@ -480,45 +578,19 @@ export default function App(){
   function nav(p){setView(null);setEdit(null);setSir(null);setPage(p);}
 
   async function saveBen(f){
-    const payload={
-      bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,
-      nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,
-      district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,
-      address:f.address,community:f.community,occupation:f.occupation,
-      employment:f.employment,education:f.education,component_id:Number(f.component_id),
-      status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,
-      height:f.height,weight:f.weight,ghana_card:f.ghana_card,
-      med_condition:f.med_condition,health:f.health,family:f.family,
-      background:f.background,assigned_to:f.assigned_to||user.id,
-      enroll_date:f.enroll_date||today(),
-    };
-    try {
-      if(editBen){
-        const {data}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select("*,posts(*)").single();
-        if(data) setBens(bs=>bs.map(b=>b.id===editBen.id?data:b));
-      } else {
-        const {data}=await supabase.from("beneficiaries").insert([payload]).select("*,posts(*)").single();
-        if(data) setBens(bs=>[...bs,data]);
-      }
-    } catch(e){ console.log("Save error:",e); }
+    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:f.assigned_to||user.id,enroll_date:f.enroll_date||today()};
+    try{if(editBen){const {data}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select("*,posts(*)").single();if(data)setBens(bs=>bs.map(b=>b.id===editBen.id?data:b));}else{const {data}=await supabase.from("beneficiaries").insert([payload]).select("*,posts(*)").single();if(data)setBens(bs=>[...bs,data]);}}catch(e){console.log("Save error:",e);}
     setEdit(null);nav("ben-list");
   }
 
   async function addPost(ben,text,author){
-    const newPost={beneficiary_id:ben.id,author:author.name,text,date:today()};
-    try {
-      const {data}=await supabase.from("posts").insert([newPost]).select().single();
-      if(data){
-        setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));
-        if(viewBen?.id===ben.id) setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));
-      }
-    } catch(e){ console.log("Post error:",e); }
+    try{const {data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:today()}]).select().single();if(data){setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));}}catch(e){console.log("Post error:",e);}
     setPost(null);
   }
 
   if(loading)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.off,flexDirection:"column",gap:16}}><div className="spin" style={{width:44,height:44,border:`4px solid ${T.greyM}`,borderTopColor:T.coral,borderRadius:"50%"}}/><div style={{color:T.grey,fontSize:14}}>Loading OGB App...</div></div>);
 
-  if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");}} users={users}/>;
+  if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");}} users={users} logoUrl={logoUrl}/>;
 
   function renderPage(){
     if(sirBen)  return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
@@ -528,13 +600,13 @@ export default function App(){
     if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)}/>;
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
     if(page==="users"&&user.role==="Admin") return <UserMgmt users={users} setUsers={setUsers}/>;
-    if(page==="settings"&&user.role==="Admin") return <Settings/>;
+    if(page==="settings"&&user.role==="Admin") return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
     if(page.startsWith("sir")) return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")}/>;
     return <Dashboard bens={bens} user={user}/>;
   }
 
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
-    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}}/>
+    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl}/>
     <div style={{marginLeft:248,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
