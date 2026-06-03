@@ -246,58 +246,57 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
-function Dashboard({bens,user}){
+function Dashboard({bens,user,onNavigate}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[vis.length, vis.filter(b=>b.status==="Active").length, vis.filter(b=>b.status==="Completed").length, vis.filter(b=>b.gender==="Male").length, vis.filter(b=>b.gender==="Female").length];
+  const summaryFilters=["all","Active","Completed","Male","Female"];
   return(<div className="fade-in">
     <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
-
-      {/* Summary Strip */}
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
         {STATS.map((s,i)=>(
-          <div key={s.label} className="card-hover" style={{background:s.bg,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 3px 12px rgba(0,0,0,0.15)",transition:"all 0.2s",cursor:"default"}}>
-            {/* Icon in a soft translucent circle */}
+          <div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{statFilter:summaryFilters[i]})}
+            style={{background:s.bg,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 3px 12px rgba(0,0,0,0.15)",transition:"all 0.2s",cursor:"pointer"}}>
             <div style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",fontSize:20}}>{s.icon}</div>
             <div style={{fontSize:32,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif",lineHeight:1}}>{counts[i]}</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",marginTop:6,textTransform:"uppercase",letterSpacing:0.8,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.60)",marginTop:4}}>Click to view →</div>
           </div>
         ))}
       </div>
-
-      {/* Component Cards */}
       <SH>Beneficiaries by Programme Component</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
         {COMPONENTS.map(c=>{
           const count=vis.filter(b=>b.component_id===c.id).length;
           return(
-            <div key={c.id} className="card-hover" style={{borderRadius:12,background:"#fff",border:`1px solid ${T.greyM}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.07)",transition:"all 0.22s",cursor:"pointer"}}>
-              {/* Coloured header strip */}
+            <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{compFilter:c.id})}
+              style={{borderRadius:12,background:"#fff",border:`1px solid ${T.greyM}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.07)",transition:"all 0.22s",cursor:"pointer"}}>
               <div style={{background:c.color,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
-                {/* Icon in soft translucent pill */}
                 <div style={{width:36,height:36,borderRadius:8,background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.92)",fontWeight:600,lineHeight:1.3}}>{c.name}</div>
               </div>
-              {/* White bottom with count */}
               <div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{fontSize:11,color:T.grey}}>Total Beneficiaries</div>
+                <div style={{fontSize:11,color:T.grey}}>Click to view →</div>
                 <div style={{fontSize:26,fontWeight:700,color:c.color,fontFamily:"'Playfair Display',serif"}}>{count}</div>
               </div>
-            </div>
-          );
-        })}
+            </div>);})}
       </div>
     </div>
   </div>);
 }
 
 // ── BENEFICIARY LIST ──────────────────────────────────────────
-function BenList({bens,user,users,onView,onEdit,onSIR}){
-  const [search,setSearch]=useState(""); const [compF,setCompF]=useState("all"); const [commF,setCommF]=useState("all"); const [statF,setStatF]=useState("all"); const [sort,setSort]=useState("name-asc");
+function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
+  const [search,setSearch]=useState("");
+  const [compF,setCompF]=useState(initialFilter.comp?String(initialFilter.comp):"all");
+  const [commF,setCommF]=useState("all");
+  const [statF,setStatF]=useState(initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
+  const [gendF,setGendF]=useState(initialFilter.stat==="Male"||initialFilter.stat==="Female"?initialFilter.stat:"all");
+  const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
-    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF))
+    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
@@ -311,7 +310,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR}){
           <div style={{flex:"1 1 130px"}}><Lbl c="Community"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option>{communities.map(c=><option key={c}>{c}</option>)}</select></div>
           <div style={{flex:"1 1 110px"}}><Lbl c="Status"/><select value={statF} onChange={e=>setStatF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option><option>Active</option><option>Completed</option><option>On Hold</option></select></div>
           <div style={{flex:"1 1 140px"}}><Lbl c="Sort By"/><select value={sort} onChange={e=>setSort(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="name-asc">Name A→Z</option><option value="name-desc">Name Z→A</option><option value="updated-desc">Last Updated ↓</option></select></div>
-          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setSort("name-asc");}}>Clear</Btn>
+          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setGendF("all");setSort("name-asc");}}>Clear</Btn>
         </div>
         <div style={{marginTop:10,fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>
       </div>
@@ -700,7 +699,7 @@ function PostModal({ben,user,onSave,onClose}){
 export default function App(){
   const [user,setUser]=useState(null); const [loading,setLoading]=useState(true); const [page,setPage]=useState("dashboard");
   const [bens,setBens]=useState([]); const [users,setUsers]=useState(DEMO_USERS);
-  const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null);
+  const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null); const [dashFilter,setDashFilter]=useState({});
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
 
   // Users are now saved to Supabase - no localStorage needed
@@ -725,7 +724,7 @@ export default function App(){
     load();
   },[]);
 
-  function nav(p){setView(null);setEdit(null);setSir(null);setPage(p);}
+  function nav(p){setView(null);setEdit(null);setSir(null);setPage(p); if(p!=="ben-list") setDashFilter({});}
 
   async function saveBen(f){
     const payload={
@@ -801,8 +800,8 @@ export default function App(){
     if(sirBen)  return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
     if(viewBen) return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)}/>;
     if(editBen||page==="ben-add") return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
-    if(page==="dashboard") return <Dashboard bens={bens} user={user}/>;
-    if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)}/>;
+    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{setDashFilter(filter||{});nav(p);}}/>;
+    if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
     if(page==="users"&&user.role==="Admin") return <UserMgmt users={users} setUsers={setUsers}/>;
     if(page==="settings"&&user.role==="Admin") return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
