@@ -226,6 +226,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
         <NI label="Archive" icon="🗄" p="sir-archive" sub/>
       </G>
       <NI label="Posts" icon="💬" p="posts"/>
+      <NI label="My Account" icon="👤" p="my-account"/>
       {user.role==="Admin"&&<>
         <div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div>
         <NI label="User Management" icon="👤" p="users"/>
@@ -256,7 +257,7 @@ function Dashboard({bens,user,onNavigate}){
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
         {STATS.map((s,i)=>(
-          <div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{statFilter:summaryFilters[i]})}
+          <div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})}
             style={{background:s.bg,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 3px 12px rgba(0,0,0,0.15)",transition:"all 0.2s",cursor:"pointer"}}>
             <div style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",fontSize:20}}>{s.icon}</div>
             <div style={{fontSize:32,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif",lineHeight:1}}>{counts[i]}</div>
@@ -270,7 +271,7 @@ function Dashboard({bens,user,onNavigate}){
         {COMPONENTS.map(c=>{
           const count=vis.filter(b=>b.component_id===c.id).length;
           return(
-            <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{compFilter:c.id})}
+            <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})}
               style={{borderRadius:12,background:"#fff",border:`1px solid ${T.greyM}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.07)",transition:"all 0.22s",cursor:"pointer"}}>
               <div style={{background:c.color,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:8,background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
@@ -289,10 +290,11 @@ function Dashboard({bens,user,onNavigate}){
 // ── BENEFICIARY LIST ──────────────────────────────────────────
 function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const [search,setSearch]=useState("");
+  const isGender = initialFilter.stat==="Male"||initialFilter.stat==="Female";
   const [compF,setCompF]=useState(initialFilter.comp?String(initialFilter.comp):"all");
   const [commF,setCommF]=useState("all");
-  const [statF,setStatF]=useState(initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
-  const [gendF,setGendF]=useState(initialFilter.stat==="Male"||initialFilter.stat==="Female"?initialFilter.stat:"all");
+  const [statF,setStatF]=useState(!isGender&&initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
+  const [gendF,setGendF]=useState(isGender?initialFilter.stat:"all");
   const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
@@ -447,7 +449,7 @@ function SIRView({ben,users,onBack}){
 }
 
 function BenForm({user,edit,users,onSave,onCancel}){
-  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"Eastern",district:"",city:"",area:"",physical_desc:"",address:"",community:"New Juaben North",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
+  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"Eastern",district:"",city:"",area:"",physical_desc:"",address:"",community:"New Juaben North",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id||"",enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank); const [busy,setBusy]=useState(false);
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   const communities=["New Juaben North","Effiduase","Asokore","Oyoko","Kukurantumi","Old Estate","Zongo","Suhum","Akwadum","Dansuagya"];
@@ -622,14 +624,16 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
   const [pwForm,setPwForm]=useState({current:"",newPw:"",confirm:""}); const [msg,setMsg]=useState("");
   function handleLogo(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setLogoUrl(ev.target.result);r.readAsDataURL(file);}
   async function changeMyPassword(){
-    const me=users.find(u=>u.id===user.id);
-    if(pwForm.current!==me.password){setMsg("Current password incorrect.");return;}
-    if(pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}
-    if(pwForm.newPw!==pwForm.confirm){setMsg("Passwords don't match.");return;}
+    if(!pwForm.current){setMsg("Please enter your current password.");return;}
+    if(pwForm.newPw.length<6){setMsg("New password must be at least 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirm){setMsg("New passwords do not match.");return;}
+    // Verify current password against Supabase
+    const verified = await loginUser(user.email, pwForm.current);
+    if(!verified){setMsg("Current password is incorrect.");return;}
     const ok = await updateUserPassword(user.id, pwForm.newPw);
     if(ok){
       setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));
-      setMsg("✅ Password changed successfully! Works on all devices now.");
+      setMsg("✅ Password changed successfully! Works on all devices.");
     } else {
       setMsg("Error saving password. Please try again.");
     }
@@ -676,6 +680,57 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
             <span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span>
             <span style={{fontSize:12,color:T.navy}}>{v}</span>
           </div>))}
+      </div>
+    </div>
+  </div>);
+}
+
+
+// ── MY ACCOUNT (for all users) ───────────────────────────────
+function MyAccount({user,users,setUsers,onLogin}){
+  const [pwForm,setPwForm]=useState({current:"",newPw:"",confirm:""});
+  const [msg,setMsg]=useState("");
+
+  async function changeMyPassword(){
+    if(!pwForm.current){setMsg("Please enter your current password.");return;}
+    if(pwForm.newPw.length<6){setMsg("New password must be at least 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirm){setMsg("New passwords do not match.");return;}
+    const verified = await loginUser(user.email, pwForm.current);
+    if(!verified){setMsg("Current password is incorrect.");return;}
+    const ok = await updateUserPassword(user.id, pwForm.newPw);
+    if(ok){
+      setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));
+      setMsg("✅ Password changed successfully! Use your new password next time you log in.");
+    } else {
+      setMsg("Error saving password. Please try again.");
+    }
+    setPwForm({current:"",newPw:"",confirm:""});
+  }
+
+  return(<div className="fade-in">
+    <Topbar title="My Account" sub="Manage your account settings"/>
+    <div style={{padding:"24px 32px",maxWidth:600}}>
+      <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
+        <SH>Profile</SH>
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+          <div style={{width:60,height:60,borderRadius:"50%",background:aColor(user.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:22,color:"#fff"}}>{inits(user.name)}</div>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:T.navy}}>{user.name}</div>
+            <div style={{fontSize:13,color:T.grey}}>{user.email}</div>
+            <span style={{background:user.role==="Admin"?"#FDEDEC":"#EBF5FB",color:user.role==="Admin"?"#C0392B":"#1A5276",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block",marginTop:4}}>{user.role}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <SH>Change Password</SH>
+        {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13}}>{msg}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:16}}>
+          <FI label="Current Password *" value={pwForm.current} onChange={v=>setPwForm(p=>({...p,current:v}))} type="password"/>
+          <FI label="New Password * (min 6 characters)" value={pwForm.newPw} onChange={v=>setPwForm(p=>({...p,newPw:v}))} type="password"/>
+          <FI label="Confirm New Password *" value={pwForm.confirm} onChange={v=>setPwForm(p=>({...p,confirm:v}))} type="password"/>
+        </div>
+        <Btn variant="primary" onClick={changeMyPassword}>Update Password</Btn>
       </div>
     </div>
   </div>);
@@ -757,7 +812,7 @@ export default function App(){
       health:f.health||"Good",
       family:f.family||"",
       background:f.background||"",
-      assigned_to:user.name,
+      assigned_to:f.assigned_to||user.id,
       enroll_date:f.enroll_date||today(),
     };
     try {
@@ -805,6 +860,7 @@ export default function App(){
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
     if(page==="users"&&user.role==="Admin") return <UserMgmt users={users} setUsers={setUsers}/>;
     if(page==="settings"&&user.role==="Admin") return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
+    if(page==="my-account") return <MyAccount user={user} users={users} setUsers={setUsers}/>;
     if(page.startsWith("sir")) return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")}/>;
     return <Dashboard bens={bens} user={user}/>;
   }
