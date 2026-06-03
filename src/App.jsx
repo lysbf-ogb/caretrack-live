@@ -249,45 +249,64 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 // ── DASHBOARD ─────────────────────────────────────────────────
 function Dashboard({bens,user,onNavigate}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
-  const counts=[vis.length, vis.filter(b=>b.status==="Active").length, vis.filter(b=>b.status==="Completed").length, vis.filter(b=>b.gender==="Male").length, vis.filter(b=>b.gender==="Female").length];
+  const counts=[
+    vis.length,
+    vis.filter(b=>b.status==="Active").length,
+    vis.filter(b=>b.status==="Completed").length,
+    vis.filter(b=>b.gender==="Male").length,
+    vis.filter(b=>b.gender==="Female").length,
+  ];
   const statFilters=["all","Active","Completed","Male","Female"];
-  return(<div className="fade-in">
-    <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
-    <div style={{padding:"28px 32px"}}>
-      <SH>Programme Summary at a Glance</SH>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
-        {STATS.map((s,i)=>(
-          <div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})}
-            style={{background:s.bg,borderRadius:12,padding:"18px 16px",textAlign:"center",boxShadow:"0 3px 12px rgba(0,0,0,0.15)",transition:"all 0.2s",cursor:"pointer"}}>
-            <div style={{width:44,height:44,borderRadius:"50%",background:"rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",fontSize:20}}>{s.icon}</div>
-            <div style={{fontSize:32,fontWeight:700,color:"#fff",fontFamily:"'Playfair Display',serif",lineHeight:1}}>{counts[i]}</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",marginTop:6,textTransform:"uppercase",letterSpacing:0.8,fontWeight:600}}>{s.label}</div>
-            <div style={{fontSize:10,color:"rgba(255,255,255,0.60)",marginTop:4}}>Click to view →</div>
-          </div>
-        ))}
-      </div>
-      <SH>Beneficiaries by Programme Component</SH>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-        {COMPONENTS.map(c=>{
-          const count=vis.filter(b=>b.component_id===c.id).length;
-          return(
-            <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})}
-              style={{borderRadius:12,background:"#fff",border:`1px solid ${T.greyM}`,overflow:"hidden",boxShadow:"0 2px 8px rgba(0,0,0,0.07)",transition:"all 0.22s",cursor:"pointer"}}>
-              <div style={{background:c.color,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:36,height:36,borderRadius:8,background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{c.icon}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.92)",fontWeight:600,lineHeight:1.3}}>{c.name}</div>
+
+  const sumCards=[
+    {label:"Total Beneficiaries", icon:"👨‍👩‍👧‍👦", bg:"#1A252F"},
+    {label:"Active",              icon:"✅",    bg:"#27AE60"},
+    {label:"Completed",           icon:"🎯",    bg:"#2980B9"},
+    {label:"Male",                icon:"👨",    bg:"#8E44AD"},
+    {label:"Female",              icon:"👩",    bg:"#E67E22"},
+  ];
+
+  return(
+    <div className="fade-in">
+      <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
+      <div style={{padding:"28px 32px"}}>
+
+        {/* Summary Strip */}
+        <SH>Programme Summary at a Glance</SH>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
+          {sumCards.map((s,i)=>(
+            <div key={s.label} className="card-hover"
+              onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})}
+              style={{background:s.bg,borderRadius:14,padding:"24px 16px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
+              <div style={{fontSize:28,marginBottom:10,opacity:0.9}}>{s.icon}</div>
+              <div style={{fontSize:44,fontWeight:800,color:"#fff",lineHeight:1,marginBottom:8,fontFamily:"'Playfair Display',serif"}}>{counts[i]}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",textTransform:"uppercase",letterSpacing:1.5,fontWeight:600}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Component Cards */}
+        <SH>Beneficiaries by Programme Component</SH>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+          {COMPONENTS.map(c=>{
+            const count=vis.filter(b=>b.component_id===c.id).length;
+            return(
+              <div key={c.id} className="card-hover"
+                onClick={()=>onNavigate("ben-list",{comp:c.id})}
+                style={{background:c.color,borderRadius:14,padding:"28px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
+                <div style={{fontSize:36,marginBottom:12}}>{c.icon}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.9)",fontWeight:600,marginBottom:16,lineHeight:1.3,minHeight:36}}>{c.name}</div>
+                <div style={{fontSize:52,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.75)",marginTop:6,textTransform:"uppercase",letterSpacing:1}}>Total Beneficiaries</div>
               </div>
-              <div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{fontSize:11,color:T.grey}}>Click to view →</div>
-                <div style={{fontSize:26,fontWeight:700,color:c.color,fontFamily:"'Playfair Display',serif"}}>{count}</div>
-              </div>
-            </div>);})}
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>);
+  );
 }
 
-// ── BENEFICIARY LIST ──────────────────────────────────────────
 function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const [search,setSearch]=useState("");
   const [compF,setCompF]=useState("all");
