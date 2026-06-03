@@ -617,9 +617,20 @@ function PostModal({ben,user,onSave,onClose}){
 
 export default function App(){
   const [user,setUser]=useState(null); const [loading,setLoading]=useState(true); const [page,setPage]=useState("dashboard");
-  const [bens,setBens]=useState([]); const [users,setUsers]=useState(DEMO_USERS);
+  const [bens,setBens]=useState([]); const [users,setUsers]=useState(()=>{
+    try{
+      const saved=localStorage.getItem('ogb_users');
+      return saved?JSON.parse(saved):DEMO_USERS;
+    }catch(e){return DEMO_USERS;}
+  });
   const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
+
+  // Save users to localStorage whenever they change
+  useEffect(()=>{
+    try{ localStorage.setItem('ogb_users', JSON.stringify(users)); }
+    catch(e){ console.log('Storage error:',e); }
+  },[users]);
 
   useEffect(()=>{if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}},[]);
   useEffect(()=>{
