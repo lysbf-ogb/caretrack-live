@@ -193,7 +193,7 @@ function Login({onLogin,users,logoUrl}){
 // ── SIDEBAR (CFC green) ───────────────────────────────────────
 function Sidebar({user,page,setPage,onLogout,logoUrl}){
   const [benOpen,setBen]=useState(true); const [sirOpen,setSir]=useState(false);
-  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)}
+  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>nav(p)}
     style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,
       color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,
       background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}>
@@ -779,7 +779,7 @@ export default function App(){
     load();
   },[]);
 
-  function nav(p){setView(null);setEdit(null);setSir(null);setPage(p); if(p!=="ben-list") setDashFilter({});}
+  function nav(p,filter){setView(null);setEdit(null);setSir(null);if(filter!==undefined)setDashFilter(filter);else if(p!=="ben-list")setDashFilter({});setPage(p);}
 
   async function saveBen(f){
     const payload={
@@ -855,7 +855,7 @@ export default function App(){
     if(sirBen)  return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
     if(viewBen) return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)}/>;
     if(editBen||page==="ben-add") return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
-    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{setDashFilter(filter||{});nav(p);}}/>;
+    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{nav(p,filter||{});}}/>;
     if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
     if(page==="users"&&user.role==="Admin") return <UserMgmt users={users} setUsers={setUsers}/>;
