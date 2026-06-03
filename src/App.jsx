@@ -12,6 +12,44 @@ const DEMO_USERS = [
   { id:"officer-2", email:"abena@ogb.org",  password:"pass123",  name:"Abena Owusu",       role:"Programme Officer", avatar:"AO" },
 ];
 
+// Load users from Supabase app_users table
+async function loadAppUsers() {
+  try {
+    const {data,error} = await supabase.from("app_users").select("*").order("name");
+    if(!error && data && data.length > 0) return data;
+  } catch(e) { console.log("loadAppUsers error:",e); }
+  return DEMO_USERS;
+}
+
+async function loginUser(email, password) {
+  try {
+    const {data,error} = await supabase.from("app_users").select("*").eq("email", email.toLowerCase()).eq("password", password).single();
+    if(!error && data) return data;
+  } catch(e) { console.log("loginUser error:",e); }
+  return null;
+}
+
+async function updateUserPassword(userId, newPassword) {
+  try {
+    const {error} = await supabase.from("app_users").update({password: newPassword}).eq("id", userId);
+    return !error;
+  } catch(e) { console.log("updatePassword error:",e); return false; }
+}
+
+async function saveAppUser(user) {
+  try {
+    const {error} = await supabase.from("app_users").upsert({...user}).eq("id", user.id);
+    return !error;
+  } catch(e) { console.log("saveUser error:",e); return false; }
+}
+
+async function deleteAppUser(userId) {
+  try {
+    const {error} = await supabase.from("app_users").delete().eq("id", userId);
+    return !error;
+  } catch(e) { console.log("deleteUser error:",e); return false; }
+}
+
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -126,8 +164,14 @@ function Topbar({title,sub}){
 
 // ── LOGIN ─────────────────────────────────────────────────────
 function Login({onLogin,users,logoUrl}){
-  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState("");
-  function go(){const u=users.find(u=>u.email.toLowerCase()===email.toLowerCase()&&u.password===pass);if(u)onLogin(u);else setErr("Invalid email or password.");}
+  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false);
+  async function go(){
+    if(!email||!pass){setErr("Please enter your email and password.");return;}
+    setBusy(true);setErr("");
+    const u = await loginUser(email, pass);
+    if(u){onLogin(u);}else setErr("Invalid email or password.");
+    setBusy(false);
+  }
   return(<div style={{minHeight:"100vh",background:`linear-gradient(160deg,#1A252F 0%,#27AE60 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{background:"#fff",borderRadius:20,padding:"44px 40px",width:400,boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
@@ -139,7 +183,7 @@ function Login({onLogin,users,logoUrl}){
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <input placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} type="email" onKeyDown={e=>e.key==="Enter"&&go()} style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
         <input placeholder="Password" value={pass} onChange={e=>setPass(e.target.value)} type="password" onKeyDown={e=>e.key==="Enter"&&go()} style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
-        <button onClick={go} style={{background:"#27AE60",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:700,fontFamily:"'Source Sans 3',sans-serif",cursor:"pointer"}}>Sign In →</button>
+        <button onClick={go} disabled={busy} style={{background:busy?"#95a5a6":"#27AE60",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:700,fontFamily:"'Source Sans 3',sans-serif",cursor:busy?"not-allowed":"pointer"}}>{busy?"Signing in...":"Sign In →"}</button>
       </div>
       <div style={{marginTop:20,padding:"12px 14px",background:T.off,borderRadius:8,fontSize:11,color:T.grey,textAlign:"center"}}>Contact your Coordinator for login credentials</div>
     </div>
@@ -492,10 +536,35 @@ function UserMgmt({users,setUsers}){
   const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer"});
   const [pwForm,setPwForm]=useState({newPw:"",confirmPw:""}); const [msg,setMsg]=useState("");
   const s=(k,v)=>setForm(p=>({...p,[k]:v}));
-  function addUser(){if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}if(users.find(u=>u.email===form.email)){setMsg("Email already exists.");return;}setUsers(u=>[...u,{id:`officer-${Date.now()}`,name:form.name,email:form.email,password:form.password,role:form.role,avatar:inits(form.name)}]);setMsg("✅ User created!");setForm({name:"",email:"",password:"",role:"Programme Officer"});setShowAdd(false);}
+  async function addUser(){
+    if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}
+    if(users.find(u=>u.email===form.email)){setMsg("Email already exists.");return;}
+    const newUser={id:`officer-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name)};
+    const ok = await saveAppUser(newUser);
+    if(ok){
+      setUsers(u=>[...u,newUser]);
+      setMsg("✅ User created successfully!");
+    } else {
+      setMsg("Error creating user. Please try again.");
+    }
+    setForm({name:"",email:"",password:"",role:"Programme Officer"});
+    setShowAdd(false);
+  }
   function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,role:editUser.role,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
-  function deleteUser(id){if(!window.confirm("Remove this user account?"))return;setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
-  function changePassword(){if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}setUsers(u=>u.map(x=>x.id===changePwUser.id?{...x,password:pwForm.newPw}:x));setMsg("✅ Password changed!");setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});}
+  async function deleteUser(id){
+    if(!window.confirm("Remove this user account?"))return;
+    await deleteAppUser(id);
+    setUsers(u=>u.filter(x=>x.id!==id));
+    setMsg("✅ User removed.");
+  }
+  async function changePassword(){
+    if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}
+    await updateUserPassword(changePwUser.id, pwForm.newPw);
+    setUsers(u=>u.map(x=>x.id===changePwUser.id?{...x,password:pwForm.newPw}:x));
+    setMsg("✅ Password changed! Works on all devices.");
+    setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});
+  }
   return(<div className="fade-in">
     <Topbar title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
@@ -553,7 +622,20 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
   const fileRef=useRef();
   const [pwForm,setPwForm]=useState({current:"",newPw:"",confirm:""}); const [msg,setMsg]=useState("");
   function handleLogo(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setLogoUrl(ev.target.result);r.readAsDataURL(file);}
-  function changeMyPassword(){const me=users.find(u=>u.id===user.id);if(pwForm.current!==me.password){setMsg("Current password incorrect.");return;}if(pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirm){setMsg("Passwords don't match.");return;}setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));setMsg("✅ Password changed successfully!");setPwForm({current:"",newPw:"",confirm:""});}
+  async function changeMyPassword(){
+    const me=users.find(u=>u.id===user.id);
+    if(pwForm.current!==me.password){setMsg("Current password incorrect.");return;}
+    if(pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}
+    if(pwForm.newPw!==pwForm.confirm){setMsg("Passwords don't match.");return;}
+    const ok = await updateUserPassword(user.id, pwForm.newPw);
+    if(ok){
+      setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));
+      setMsg("✅ Password changed successfully! Works on all devices now.");
+    } else {
+      setMsg("Error saving password. Please try again.");
+    }
+    setPwForm({current:"",newPw:"",confirm:""});
+  }
   return(<div className="fade-in">
     <Topbar title="Settings" sub="App configuration — Admin only"/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
@@ -617,22 +699,18 @@ function PostModal({ben,user,onSave,onClose}){
 
 export default function App(){
   const [user,setUser]=useState(null); const [loading,setLoading]=useState(true); const [page,setPage]=useState("dashboard");
-  const [bens,setBens]=useState([]); const [users,setUsers]=useState(()=>{
-    try{
-      const saved=localStorage.getItem('ogb_users');
-      return saved?JSON.parse(saved):DEMO_USERS;
-    }catch(e){return DEMO_USERS;}
-  });
+  const [bens,setBens]=useState([]); const [users,setUsers]=useState(DEMO_USERS);
   const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
 
-  // Save users to localStorage whenever they change
-  useEffect(()=>{
-    try{ localStorage.setItem('ogb_users', JSON.stringify(users)); }
-    catch(e){ console.log('Storage error:',e); }
-  },[users]);
+  // Users are now saved to Supabase - no localStorage needed
 
   useEffect(()=>{if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}},[]);
+
+  // Load users from Supabase on startup
+  useEffect(()=>{
+    loadAppUsers().then(u=>setUsers(u));
+  },[]);
   useEffect(()=>{
     async function load(){
       try{
