@@ -625,18 +625,82 @@ export default function App(){
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
 
   useEffect(()=>{if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}},[]);
-  useEffect(()=>{async function load(){try{const {data,error}=await supabase.from("beneficiaries").select("*, posts(*)").order("name");if(!error&&data)setBens(data);}catch(e){console.log("Load:",e);}setLoading(false);}load();},[]);
+  useEffect(()=>{
+    async function load(){
+      try{
+        const {data:benData,error:benError}=await supabase.from("beneficiaries").select("*").order("name");
+        if(benError){console.log("Load error:",benError);setLoading(false);return;}
+        const {data:postData}=await supabase.from("posts").select("*").order("created_at");
+        const bensWithPosts=(benData||[]).map(b=>({...b,posts:(postData||[]).filter(p=>p.beneficiary_id===b.id)}));
+        setBens(bensWithPosts);
+      }catch(e){console.log("Load error:",e);}
+      setLoading(false);
+    }
+    load();
+  },[]);
 
   function nav(p){setView(null);setEdit(null);setSir(null);setPage(p);}
 
   async function saveBen(f){
-    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:null,enroll_date:f.enroll_date||today()};
-    try{if(editBen){const {data}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select("*,posts(*)").single();if(data)setBens(bs=>bs.map(b=>b.id===editBen.id?data:b));}else{const {data}=await supabase.from("beneficiaries").insert([payload]).select("*,posts(*)").single();if(data)setBens(bs=>[...bs,data]);}}catch(e){console.log("Save:",e);}
+    const payload={
+      bid:f.bid||"",
+      name:f.name,
+      age:Number(f.age)||null,
+      gender:f.gender||"Male",
+      dob:f.dob||null,
+      nationality:f.nationality||"Ghanaian",
+      tribe:f.tribe||"",
+      religion:f.religion||"",
+      region:f.region||"Eastern",
+      district:f.district||"",
+      city:f.city||"",
+      area:f.area||"",
+      physical_desc:f.physical_desc||"",
+      address:f.address||"",
+      community:f.community||"",
+      occupation:f.occupation||"",
+      employment:f.employment||"Unemployed",
+      education:f.education||"SHS",
+      component_id:Number(f.component_id)||1,
+      status:f.status||"Active",
+      disability:f.disability||"N/A",
+      vuln_on_arrival:f.vuln_on_arrival||"No",
+      height:f.height||"",
+      weight:f.weight||"",
+      ghana_card:f.ghana_card||"",
+      med_condition:f.med_condition||"None",
+      health:f.health||"Good",
+      family:f.family||"",
+      background:f.background||"",
+      assigned_to:user.name,
+      enroll_date:f.enroll_date||today(),
+    };
+    try {
+      if(editBen){
+        const {data,error}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select().single();
+        if(error){console.log("Update error:",error);alert("Error saving: "+error.message);return;}
+        if(data){
+          const {data:posts}=await supabase.from("posts").select("*").eq("beneficiary_id",data.id);
+          setBens(bs=>bs.map(b=>b.id===editBen.id?{...data,posts:posts||[]}:b));
+        }
+      } else {
+        const {data,error}=await supabase.from("beneficiaries").insert([payload]).select().single();
+        if(error){console.log("Insert error:",error);alert("Error saving: "+error.message);return;}
+        if(data) setBens(bs=>[...bs,{...data,posts:[]}]);
+      }
+    } catch(e){ console.log("Save error:",e); alert("Connection error. Please try again."); return; }
     setEdit(null);nav("ben-list");
   }
 
   async function addPost(ben,text,author){
-    try{const {data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:today()}]).select().single();if(data){setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));}}catch(e){console.log("Post:",e);}
+    try{
+      const {data,error}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:today()}]).select().single();
+      if(error){console.log("Post error:",error);return;}
+      if(data){
+        setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));
+        if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));
+      }
+    }catch(e){console.log("Post error:",e);}
     setPost(null);
   }
 
