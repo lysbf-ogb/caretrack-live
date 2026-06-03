@@ -257,54 +257,44 @@ function Dashboard({bens,user,onNavigate}){
     vis.filter(b=>b.gender==="Female").length,
   ];
   const statFilters=["all","Active","Completed","Male","Female"];
-
   const sumCards=[
-    {label:"Total Beneficiaries", icon:"👨‍👩‍👧‍👦", bg:"#1A252F"},
-    {label:"Active",              icon:"✅",    bg:"#27AE60"},
-    {label:"Completed",           icon:"🎯",    bg:"#2980B9"},
-    {label:"Male",                icon:"👨",    bg:"#8E44AD"},
-    {label:"Female",              icon:"👩",    bg:"#E67E22"},
+    {label:"Total Beneficiaries",icon:"👨‍👩‍👧‍👦",bg:"#1A252F"},
+    {label:"Active",             icon:"✅",   bg:"#27AE60"},
+    {label:"Completed",          icon:"🎯",   bg:"#2980B9"},
+    {label:"Male",               icon:"👨",   bg:"#8E44AD"},
+    {label:"Female",             icon:"👩",   bg:"#E67E22"},
   ];
-
-  return(
-    <div className="fade-in">
-      <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
-      <div style={{padding:"28px 32px"}}>
-
-        {/* Summary Strip */}
-        <SH>Programme Summary at a Glance</SH>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:32}}>
-          {sumCards.map((s,i)=>(
-            <div key={s.label} className="card-hover"
-              onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})}
-              style={{background:s.bg,borderRadius:14,padding:"24px 16px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
-              <div style={{fontSize:28,marginBottom:10,opacity:0.9}}>{s.icon}</div>
-              <div style={{fontSize:44,fontWeight:800,color:"#fff",lineHeight:1,marginBottom:8,fontFamily:"'Playfair Display',serif"}}>{counts[i]}</div>
-              <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",textTransform:"uppercase",letterSpacing:1.5,fontWeight:600}}>{s.label}</div>
+  return(<div className="fade-in">
+    <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
+    <div style={{padding:"28px 32px"}}>
+      <SH>Programme Summary at a Glance</SH>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
+        {sumCards.map((s,i)=>(
+          <div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})}
+            style={{background:s.bg,borderRadius:16,padding:"32px 16px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.20)"}}>
+            <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:26}}>{s.icon}</div>
+            <div style={{fontSize:52,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{counts[i]}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.88)",textTransform:"uppercase",letterSpacing:1.5,fontWeight:700,marginTop:10}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <SH>Beneficiaries by Programme Component</SH>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        {COMPONENTS.map(c=>{
+          const count=vis.filter(b=>b.component_id===c.id).length;
+          return(
+            <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})}
+              style={{background:c.color,borderRadius:16,padding:"32px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
+              <div style={{width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:28}}>{c.icon}</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,0.92)",fontWeight:700,marginBottom:16,lineHeight:1.4}}>{c.name}</div>
+              <div style={{fontSize:56,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.78)",marginTop:8,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600}}>Total Beneficiaries</div>
             </div>
-          ))}
-        </div>
-
-        {/* Component Cards */}
-        <SH>Beneficiaries by Programme Component</SH>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-          {COMPONENTS.map(c=>{
-            const count=vis.filter(b=>b.component_id===c.id).length;
-            return(
-              <div key={c.id} className="card-hover"
-                onClick={()=>onNavigate("ben-list",{comp:c.id})}
-                style={{background:c.color,borderRadius:14,padding:"28px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 4px 14px rgba(0,0,0,0.18)"}}>
-                <div style={{fontSize:36,marginBottom:12}}>{c.icon}</div>
-                <div style={{fontSize:13,color:"rgba(255,255,255,0.9)",fontWeight:600,marginBottom:16,lineHeight:1.3,minHeight:36}}>{c.name}</div>
-                <div style={{fontSize:52,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
-                <div style={{fontSize:12,color:"rgba(255,255,255,0.75)",marginTop:6,textTransform:"uppercase",letterSpacing:1}}>Total Beneficiaries</div>
-              </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
     </div>
-  );
+  </div>);
 }
 
 function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
