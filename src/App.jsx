@@ -250,7 +250,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 function Dashboard({bens,user,onNavigate}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[vis.length, vis.filter(b=>b.status==="Active").length, vis.filter(b=>b.status==="Completed").length, vis.filter(b=>b.gender==="Male").length, vis.filter(b=>b.gender==="Female").length];
-  const summaryFilters=["all","Active","Completed","Male","Female"];
+  const statFilters=["all","Active","Completed","Male","Female"];
   return(<div className="fade-in">
     <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
