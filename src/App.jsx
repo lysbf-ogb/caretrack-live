@@ -274,7 +274,9 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 function Dashboard({bens,user,onNavigate}){
-  const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
+  const vis=user.role==="Admin"
+    ?bens.filter(b=>b.approval_status==="Approved"||b.approval_status===null)
+    :bens.filter(b=>b.assigned_to===user.id&&(b.approval_status==="Approved"||b.approval_status===null));
   const counts=[
     vis.length,
     vis.filter(b=>b.status==="Active").length,
@@ -340,7 +342,9 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   },[initialFilter.comp, initialFilter.stat]);
   const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
-  const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id&&b.approval_status!=="Pending"))
+  const vis=(user.role==="Admin"
+    ?bens.filter(b=>b.approval_status==="Approved"||b.approval_status===null)
+    :bens.filter(b=>b.assigned_to===user.id&&b.approval_status!=="Pending"))
     .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
@@ -1069,13 +1073,19 @@ export default function App(){
   }
 
   function handleNotifClick(n){
-    if(n.type==="approval") nav("approvals");
-    else if(n.type==="followup"){
-      const ben=bens.find(b=>n.message&&n.message.includes(b.name));
-      if(ben){setView(ben);setSir(null);setEdit(null);setPage("ben-list");}
-    } else if(n.type==="approved"||n.type==="rejected"||n.type==="assignment"){
-      const ben=bens.find(b=>n.message&&n.message.includes(b.name));
-      if(ben){setView(ben);setSir(null);setEdit(null);setPage("ben-list");}
+    // Mark this notification as read
+    supabase.from("notifications").update({is_read:true}).eq("id",n.id).then(()=>{
+      setNotifications(ns=>ns.map(x=>x.id===n.id?{...x,is_read:true}:x));
+    });
+    // Navigate to correct page
+    if(n.type==="approval"){
+      nav("approvals");
+    } else if(n.type==="followup"){
+      nav("posts");
+    } else if(n.type==="approved"||n.type==="rejected"){
+      nav("ben-list");
+    } else if(n.type==="assignment"){
+      nav("ben-list");
     }
   }
 
