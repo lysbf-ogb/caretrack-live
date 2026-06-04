@@ -808,65 +808,6 @@ function MyAccount({user,users,setUsers,onLogin}){
 
 
 // ── FOLLOWUPS TAB WITH COMMENTS ───────────────────────────────
-function FollowUpsTab({ben,user,onAddPost}){
-  const [comments,setComments]=useState({});
-  const [newComment,setNewComment]=useState({});
-  const [loading,setLoading]=useState({});
-
-  useEffect(()=>{
-    if(!ben.posts||ben.posts.length===0) return;
-    ben.posts.forEach(async p=>{
-      const {data}=await supabase.from("comments").select("*").eq("post_id",p.id).order("created_at");
-      if(data) setComments(c=>({...c,[p.id]:data}));
-    });
-  },[ben.posts]);
-
-  async function submitComment(postId){
-    const text=newComment[postId];
-    if(!text||!text.trim()) return;
-    setLoading(l=>({...l,[postId]:true}));
-    const {data}=await supabase.from("comments").insert([{post_id:postId,author:user.name,author_role:user.role,text,created_at:new Date().toISOString()}]).select().single();
-    if(data){
-      setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));
-      setNewComment(n=>({...n,[postId]:""}));
-    }
-    setLoading(l=>({...l,[postId]:false}));
-  }
-
-  return(<div>
-    {(user.role==="Admin"||ben.assigned_to===user.id)&&
-      <Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
-    {(!ben.posts||ben.posts.length===0)&&
-      <div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
-    {(ben.posts||[]).slice().reverse().map(p=>(
-      <div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
-        <div style={{display:"flex",gap:10,marginBottom:12}}>
-          <div style={{width:36,height:36,borderRadius:"50%",background:aColor(p.author),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff",flexShrink:0}}>{inits(p.author)}</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.date}</div>
-            <div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div>
-          </div>
-        </div>
-        {(comments[p.id]||[]).map(c=>(
-          <div key={c.id} style={{display:"flex",gap:10,marginBottom:10,marginLeft:46,flexDirection:c.author_role==="Admin"?"row-reverse":"row"}}>
-            <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Admin"?"#1A252F":"#2980B9",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div>
-              <div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div>
-            </div>
-          </div>))}
-        <div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
-          <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))}
-            onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)}
-            placeholder="Write a comment or reply..." style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
-          <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]}
-            style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>
-            {loading[p.id]?"...":"Send"}
-          </button>
-        </div>
-      </div>))}
-  </div>);
-}
 
 function Profile({ben,user,users,onBack,onAddPost,onSIR}){
   const [tab,setTab]=useState("basic");
