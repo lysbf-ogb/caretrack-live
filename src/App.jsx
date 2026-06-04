@@ -144,14 +144,35 @@ function Logo({size=40,color="#fff",url=null}){
   return <img src={src} alt="OGB Logo" style={{width:size,height:size,objectFit:"contain",borderRadius:6}}/>;
 }
 
-function Topbar({title,sub}){
+function Topbar({title,sub,notifications=[],onMarkRead,onBellClick,showNotifs,user}){
+  const unread=notifications.filter(n=>!n.is_read).length;
   return(<div style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 32px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
     <div>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>
       {sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}
     </div>
     <div style={{display:"flex",alignItems:"center",gap:14}}>
-      <div style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🔔</div>
+      <div style={{position:"relative"}}>
+        <div onClick={onBellClick} style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer"}}>🔔</div>
+        {unread>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#E74C3C",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</div>}
+        {showNotifs&&<div style={{position:"absolute",right:0,top:44,width:320,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",border:`1px solid ${T.greyM}`,zIndex:200,overflow:"hidden"}}>
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyM}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontSize:14,fontWeight:700,color:T.navy}}>Notifications</span>
+            {unread>0&&<span onClick={onMarkRead} style={{fontSize:11,color:"#2980B9",cursor:"pointer"}}>Mark all read</span>}
+          </div>
+          <div style={{maxHeight:320,overflowY:"auto"}}>
+            {notifications.length===0&&<div style={{padding:"24px 16px",textAlign:"center",color:T.grey,fontSize:13}}>No notifications yet</div>}
+            {notifications.map(n=>(<div key={n.id} style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyL}`,display:"flex",gap:10,background:n.is_read?"#fff":T.off}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:n.is_read?T.greyM:"#E74C3C",flexShrink:0,marginTop:5}}/>
+              <div>
+                <div style={{fontSize:13,fontWeight:n.is_read?400:700,color:T.navy}}>{n.title}</div>
+                <div style={{fontSize:12,color:T.grey,marginTop:2}}>{n.message}</div>
+                <div style={{fontSize:11,color:T.greyM,marginTop:3}}>{new Date(n.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+              </div>
+            </div>))}
+          </div>
+        </div>}
+      </div>
       <div style={{fontSize:12,color:T.grey}}>{new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div>
     </div>
   </div>);
@@ -224,6 +245,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
       <NI label="My Account" icon="👤" p="my-account"/>
       {user.role==="Admin"&&<>
         <div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div>
+        <NI label="Approvals" icon="✅" p="approvals"/>
         <NI label="User Management" icon="👤" p="users"/>
         <NI label="Settings" icon="🔧" p="settings"/>
       </>}
@@ -242,7 +264,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
-function Dashboard({bens,user,onNavigate}){
+function Dashboard({bens,user,onNavigate,notifications=[],onMarkRead,onBellClick,showNotifs}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[
     vis.length,
@@ -260,7 +282,7 @@ function Dashboard({bens,user,onNavigate}){
     {label:"Female",             icon:"👩",   bg:"#E67E22"},
   ];
   return(<div className="fade-in">
-    <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
+    <Topbar title="Dashboard" sub="View current tasks, activities and reports" notifications={notifications} onMarkRead={onMarkRead} onBellClick={onBellClick} showNotifs={showNotifs}/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
@@ -309,7 +331,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   },[initialFilter.comp, initialFilter.stat]);
   const [sort,setSort]=useState("name-asc");
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
-  const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
+  const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id&&b.approval_status!=="Pending"))
     .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
@@ -359,6 +381,68 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
 
 const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"🏥"},{k:"education",label:"Education",icon:"📚"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"🫂"},{k:"followups",label:"Follow-Ups",icon:"💬"},{k:"documents",label:"Documents",icon:"📁"}];
 
+
+// ── FOLLOWUPS TAB WITH COMMENTS ───────────────────────────────
+function FollowUpsTab({ben,user,onAddPost}){
+  const [comments,setComments]=useState({});
+  const [newComment,setNewComment]=useState({});
+  const [loading,setLoading]=useState({});
+
+  useEffect(()=>{
+    if(!ben.posts||ben.posts.length===0) return;
+    ben.posts.forEach(async p=>{
+      const {data}=await supabase.from("comments").select("*").eq("post_id",p.id).order("created_at");
+      if(data) setComments(c=>({...c,[p.id]:data}));
+    });
+  },[ben.posts]);
+
+  async function submitComment(postId){
+    const text=newComment[postId];
+    if(!text||!text.trim()) return;
+    setLoading(l=>({...l,[postId]:true}));
+    const {data}=await supabase.from("comments").insert([{post_id:postId,author:user.name,author_role:user.role,text,created_at:new Date().toISOString()}]).select().single();
+    if(data){
+      setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));
+      setNewComment(n=>({...n,[postId]:""}));
+    }
+    setLoading(l=>({...l,[postId]:false}));
+  }
+
+  return(<div>
+    {(user.role==="Admin"||ben.assigned_to===user.id)&&
+      <Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
+    {(!ben.posts||ben.posts.length===0)&&
+      <div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
+    {(ben.posts||[]).slice().reverse().map(p=>(
+      <div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
+        <div style={{display:"flex",gap:10,marginBottom:12}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:aColor(p.author),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff",flexShrink:0}}>{inits(p.author)}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.date}</div>
+            <div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div>
+          </div>
+        </div>
+        {(comments[p.id]||[]).map(c=>(
+          <div key={c.id} style={{display:"flex",gap:10,marginBottom:10,marginLeft:46,flexDirection:c.author_role==="Admin"?"row-reverse":"row"}}>
+            <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Admin"?"#1A252F":"#2980B9",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div>
+              <div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div>
+            </div>
+          </div>))}
+        <div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
+          <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))}
+            onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)}
+            placeholder="Write a comment or reply..." style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+          <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]}
+            style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>
+            {loading[p.id]?"...":"Send"}
+          </button>
+        </div>
+      </div>))}
+  </div>);
+}
+
 function Profile({ben,user,users,onBack,onAddPost,onSIR}){
   const [tab,setTab]=useState("basic");
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
@@ -401,11 +485,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR}){
             {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={ben.family}/></div>}
             {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",ben.occupation],["Employment Status",ben.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={ben.disability}/></div>}
-            {tab==="followups"&&<div>
-              {(user.role==="Admin"||ben.assigned_to===user.id)&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
-              {(!ben.posts||ben.posts.length===0)&&<div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
-              {(ben.posts||[]).slice().reverse().map(p=>(<div key={p.id} style={{background:T.off,borderRadius:10,padding:"14px 16px",marginBottom:12,borderLeft:"3px solid #27AE60"}}><div style={{fontSize:11,color:T.grey,marginBottom:6}}>📅 {p.date} · ✍️ {p.author}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{p.text}</div></div>))}
-            </div>}
+            {tab==="followups"&&<FollowUpsTab ben={ben} user={user} onAddPost={onAddPost}/>}
             {tab==="documents"&&<div style={{textAlign:"center",padding:"36px 0"}}><div style={{fontSize:44,marginBottom:12}}>📁</div><div style={{color:T.grey,fontSize:14,marginBottom:16}}>No documents uploaded yet.</div><Btn variant="primary">+ Upload Document</Btn></div>}
           </div>
         </div>
@@ -748,6 +828,69 @@ function MyAccount({user,users,setUsers,onLogin}){
   </div>);
 }
 
+
+// ── APPROVALS PAGE ────────────────────────────────────────────
+function ApprovalsPage({bens,setBens,users,addNotification}){
+  const pending=bens.filter(b=>b.approval_status==="Pending");
+  const recent=bens.filter(b=>b.approval_status==="Approved"||b.approval_status==="Rejected").slice(-5).reverse();
+
+  async function approve(ben){
+    const {data}=await supabase.from("beneficiaries").update({approval_status:"Approved"}).eq("id",ben.id).select().single();
+    if(data){
+      setBens(bs=>bs.map(b=>b.id===ben.id?{...b,approval_status:"Approved"}:b));
+      addNotification(ben.assigned_to,"assignment","Beneficiary Approved",`${ben.name} has been approved by the Coordinator.`);
+    }
+  }
+
+  async function reject(ben){
+    const {data}=await supabase.from("beneficiaries").update({approval_status:"Rejected"}).eq("id",ben.id).select().single();
+    if(data) setBens(bs=>bs.map(b=>b.id===ben.id?{...b,approval_status:"Rejected"}:b));
+  }
+
+  const officer=id=>users.find(u=>u.id===id)?.name||"Unknown";
+
+  return(<div className="fade-in">
+    <Topbar title="Approvals" sub="Review and approve new beneficiary registrations"/>
+    <div style={{padding:"24px 32px"}}>
+      <div style={{background:"#fff",borderRadius:12,padding:"20px 24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
+        <div style={{fontSize:14,fontWeight:700,color:T.navy,marginBottom:16}}>Pending Approval ({pending.length})</div>
+        {pending.length===0&&<div style={{textAlign:"center",color:T.grey,padding:"24px 0",fontSize:13}}>No beneficiaries pending approval.</div>}
+        {pending.map(ben=>{
+          const comp=COMPONENTS.find(c=>c.id===ben.component_id);
+          return(<div key={ben.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0",borderBottom:`1px solid ${T.greyL}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:40,height:40,borderRadius:"50%",background:aColor(ben.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,color:"#fff"}}>{inits(ben.name)}</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:T.navy}}>{ben.name}</div>
+                <div style={{fontSize:12,color:T.grey}}>Added by {officer(ben.assigned_to)} · {comp?.icon} {comp?.name}</div>
+                <div style={{fontSize:11,color:T.grey,marginTop:2}}>{ben.enroll_date}</div>
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{background:"#FEF9E7",color:"#B7791F",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>Pending</span>
+              <button onClick={()=>approve(ben)} style={{padding:"7px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#27AE60",color:"#fff"}}>✓ Approve</button>
+              <button onClick={()=>reject(ben)} style={{padding:"7px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#E74C3C",color:"#fff"}}>✗ Reject</button>
+            </div>
+          </div>);
+        })}
+      </div>
+      {recent.length>0&&<div style={{background:"#fff",borderRadius:12,padding:"20px 24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <div style={{fontSize:14,fontWeight:700,color:T.navy,marginBottom:16}}>Recently Processed</div>
+        {recent.map(ben=>(<div key={ben.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:aColor(ben.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(ben.name)}</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:T.navy}}>{ben.name}</div>
+              <div style={{fontSize:11,color:T.grey}}>Added by {officer(ben.assigned_to)}</div>
+            </div>
+          </div>
+          <span style={{background:ben.approval_status==="Approved"?"#EAFAF1":"#FDEDEC",color:ben.approval_status==="Approved"?"#1D8348":"#C0392B",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{ben.approval_status==="Approved"?"✓ Approved":"✗ Rejected"}</span>
+        </div>))}
+      </div>}
+    </div>
+  </div>);
+}
+
 function PostModal({ben,user,onSave,onClose}){
   const [text,setText]=useState(""); const [busy,setBusy]=useState(false);
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
@@ -768,6 +911,8 @@ export default function App(){
   const [bens,setBens]=useState([]); const [users,setUsers]=useState(DEMO_USERS);
   const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null); const [dashFilter,setDashFilter]=useState({});
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
+  const [notifications,setNotifications]=useState([]);
+  const [showNotifs,setShowNotifs]=useState(false);
 
   // Users are now saved to Supabase - no localStorage needed
 
@@ -777,6 +922,28 @@ export default function App(){
   useEffect(()=>{
     loadAppUsers().then(u=>setUsers(u));
   },[]);
+
+  // Load notifications for current user
+  useEffect(()=>{
+    if(!user) return;
+    async function loadNotifs(){
+      const {data}=await supabase.from("notifications").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20);
+      if(data) setNotifications(data);
+    }
+    loadNotifs();
+    const interval=setInterval(loadNotifs,30000);
+    return ()=>clearInterval(interval);
+  },[user]);
+
+  async function addNotification(userId,type,title,message){
+    const {data}=await supabase.from("notifications").insert([{user_id:userId,type,title,message,is_read:false}]).select().single();
+    if(data&&user&&data.user_id===user.id) setNotifications(n=>[data,...n]);
+  }
+
+  async function markAllRead(){
+    await supabase.from("notifications").update({is_read:true}).eq("user_id",user.id).eq("is_read",false);
+    setNotifications(n=>n.map(x=>({...x,is_read:true})));
+  }
   useEffect(()=>{
     async function load(){
       try{
@@ -842,6 +1009,11 @@ export default function App(){
       }
     } catch(e){ console.log("Save error:",e); alert("Connection error. Please try again."); return; }
     setEdit(null);nav("ben-list");
+    // Notify admin when officer adds a beneficiary
+    if(user.role!=="Admin"&&!editBen){
+      const adminUser=users.find(u=>u.role==="Admin");
+      if(adminUser) await addNotification(adminUser.id,"approval","New beneficiary pending approval",`${f.name} was registered by ${user.name} and needs your approval.`);
+    }
   }
 
   async function addPost(ben,text,author){
@@ -854,6 +1026,11 @@ export default function App(){
       }
     }catch(e){console.log("Post error:",e);}
     setPost(null);
+    // Notify admin of new follow-up note
+    if(user.role!=="Admin"){
+      const adminUser=users.find(u=>u.role==="Admin");
+      if(adminUser) await addNotification(adminUser.id,"followup","New follow-up note added",`${user.name} added a follow-up note on ${ben.name}.`);
+    }
   }
 
   if(loading)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.off,flexDirection:"column",gap:16}}>
@@ -867,9 +1044,10 @@ export default function App(){
     if(sirBen)  return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
     if(viewBen) return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)}/>;
     if(editBen||page==="ben-add") return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
-    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{nav(p,filter||{});}}/>;
+    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{nav(p,filter||{});}} notifications={notifications} onMarkRead={markAllRead} onBellClick={()=>setShowNotifs(s=>!s)} showNotifs={showNotifs}/>;
     if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
+    if(page==="approvals"&&user.role==="Admin") return <ApprovalsPage bens={bens} setBens={setBens} users={users} addNotification={addNotification}/>;
     if(page==="users"&&user.role==="Admin") return <UserMgmt users={users} setUsers={setUsers}/>;
     if(page==="settings"&&user.role==="Admin") return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
     if(page==="my-account") return <MyAccount user={user} users={users} setUsers={setUsers}/>;
