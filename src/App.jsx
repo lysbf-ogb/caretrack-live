@@ -811,71 +811,6 @@ function MyAccount({user,users,setUsers,onLogin}){
 
 // ── MY ACCOUNT (for all users) ───────────────────────────────
 // ── APPROVALS PAGE ────────────────────────────────────────────
-function ApprovalsPage({bens,setBens,users,addNotification}){
-  const pending=bens.filter(b=>b.approval_status==="Pending");
-  const recent=bens.filter(b=>b.approval_status==="Approved"||b.approval_status==="Rejected").slice().reverse().slice(0,10);
-
-  async function approve(ben){
-    const {data}=await supabase.from("beneficiaries").update({approval_status:"Approved"}).eq("id",ben.id).select().single();
-    if(data){
-      setBens(bs=>bs.map(b=>b.id===ben.id?{...b,approval_status:"Approved"}:b));
-      await addNotification(ben.assigned_to,"approved","✓ Beneficiary Approved",`${ben.name} has been approved by the Coordinator and added to the beneficiary list.`);
-    }
-  }
-
-  async function reject(ben){
-    const {data}=await supabase.from("beneficiaries").update({approval_status:"Rejected"}).eq("id",ben.id).select().single();
-    if(data){
-      setBens(bs=>bs.map(b=>b.id===ben.id?{...b,approval_status:"Rejected"}:b));
-      await addNotification(ben.assigned_to,"rejected","✗ Beneficiary Rejected",`${ben.name} has been rejected by the Coordinator. Please review and re-submit if necessary.`);
-    }
-  }
-
-  const officer=id=>users.find(u=>u.id===id)?.name||"Unknown";
-
-  return(<div className="fade-in">
-    <Topbar title="Approvals" sub="Review and approve new beneficiary registrations"/>
-    <div style={{padding:"24px 32px"}}>
-      <div style={{background:"#fff",borderRadius:12,padding:"20px 24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
-        <div style={{fontSize:14,fontWeight:700,color:T.navy,marginBottom:16}}>Pending Approval ({pending.length})</div>
-        {pending.length===0&&<div style={{textAlign:"center",color:T.grey,padding:"24px 0",fontSize:13}}>No beneficiaries pending approval.</div>}
-        {pending.map((ben,idx)=>{
-          const comp=COMPONENTS.find(c=>c.id===ben.component_id);
-          const isNew=idx===0;
-          return(<div key={ben.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 12px",marginBottom:8,borderRadius:10,border:`2px solid ${isNew?"#E74C3C":T.greyM}`,background:isNew?"#FFF5F5":"#fff",position:"relative"}}>
-            {isNew&&<div style={{position:"absolute",top:-10,left:12,background:"#E74C3C",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,letterSpacing:1}}>NEW</div>}
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:44,height:44,borderRadius:"50%",background:aColor(ben.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:15,color:"#fff"}}>{inits(ben.name)}</div>
-              <div>
-                <div style={{fontWeight:700,fontSize:14,color:T.navy}}>{ben.name}</div>
-                <div style={{fontSize:12,color:T.grey,marginTop:2}}>Added by <strong>{officer(ben.assigned_to)}</strong> · {comp?.icon} {comp?.name}</div>
-                <div style={{fontSize:11,color:T.grey,marginTop:2}}>📅 {ben.enroll_date}</div>
-              </div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <button onClick={()=>approve(ben)} style={{padding:"9px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:"#27AE60",color:"#fff"}}>✓ Approve</button>
-              <button onClick={()=>reject(ben)} style={{padding:"9px 20px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:"#E74C3C",color:"#fff"}}>✗ Reject</button>
-            </div>
-          </div>);
-        })}
-      </div>
-      {recent.length>0&&<div style={{background:"#fff",borderRadius:12,padding:"20px 24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-        <div style={{fontSize:14,fontWeight:700,color:T.navy,marginBottom:16}}>Recently Processed</div>
-        {recent.map(ben=>(<div key={ben.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:36,height:36,borderRadius:"50%",background:aColor(ben.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(ben.name)}</div>
-            <div>
-              <div style={{fontWeight:700,fontSize:13,color:T.navy}}>{ben.name}</div>
-              <div style={{fontSize:11,color:T.grey}}>Added by {officer(ben.assigned_to)}</div>
-            </div>
-          </div>
-          <span style={{background:ben.approval_status==="Approved"?"#EAFAF1":"#FDEDEC",color:ben.approval_status==="Approved"?"#1D8348":"#C0392B",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{ben.approval_status==="Approved"?"✓ Approved":"✗ Rejected"}</span>
-        </div>))}
-      </div>}
-    </div>
-  </div>);
-}
-
 function PostModal({ben,user,onSave,onClose}){
   const [text,setText]=useState(""); const [busy,setBusy]=useState(false);
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
@@ -905,6 +840,21 @@ export default function App(){
   // Load users from Supabase on startup
   useEffect(()=>{
     loadAppUsers().then(u=>setUsers(u));
+  },[]);
+
+  // Load beneficiaries and posts from Supabase
+  useEffect(()=>{
+    async function load(){
+      try{
+        const {data:benData,error:benError}=await supabase.from("beneficiaries").select("*").order("name");
+        if(benError){console.log("Load error:",benError);setLoading(false);return;}
+        const {data:postData}=await supabase.from("posts").select("*").order("created_at");
+        const bensWithPosts=(benData||[]).map(b=>({...b,posts:(postData||[]).filter(p=>p.beneficiary_id===b.id)}));
+        setBens(bensWithPosts);
+      }catch(e){console.log("Load error:",e);}
+      setLoading(false);
+    }
+    load();
   },[]);
 
   async function saveBen(f){
