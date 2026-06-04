@@ -144,36 +144,44 @@ function Logo({size=40,color="#fff",url=null}){
   return <img src={src} alt="OGB Logo" style={{width:size,height:size,objectFit:"contain",borderRadius:6}}/>;
 }
 
-function Topbar({title,sub,notifications=[],onMarkRead,onBellClick,showNotifs,user,onNotifClick}){
-  const unread=notifications.filter(n=>!n.is_read).length;
+function Topbar({title,sub}){
   return(<div style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 32px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
     <div>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>
       {sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}
     </div>
     <div style={{display:"flex",alignItems:"center",gap:14}}>
-      <div style={{position:"relative"}}>
-        <div onClick={onBellClick} style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer"}}>🔔</div>
-        {unread>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#E74C3C",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</div>}
-        {showNotifs&&<div style={{position:"absolute",right:0,top:44,width:320,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",border:`1px solid ${T.greyM}`,zIndex:200,overflow:"hidden"}}>
-          <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyM}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:14,fontWeight:700,color:T.navy}}>Notifications</span>
-            {unread>0&&<span onClick={onMarkRead} style={{fontSize:11,color:"#2980B9",cursor:"pointer"}}>Mark all read</span>}
-          </div>
-          <div style={{maxHeight:320,overflowY:"auto"}}>
-            {notifications.length===0&&<div style={{padding:"24px 16px",textAlign:"center",color:T.grey,fontSize:13}}>No notifications yet</div>}
-            {notifications.map(n=>(<div key={n.id} onClick={()=>onNotifClick&&onNotifClick(n)} style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyL}`,display:"flex",gap:10,background:n.is_read?"#fff":T.off,cursor:"pointer"}} className="row-hover">
-              <div style={{width:8,height:8,borderRadius:"50%",background:n.is_read?T.greyM:"#E74C3C",flexShrink:0,marginTop:5}}/>
-              <div>
-                <div style={{fontSize:13,fontWeight:n.is_read?400:700,color:T.navy}}>{n.title}</div>
-                <div style={{fontSize:12,color:T.grey,marginTop:2}}>{n.message}</div>
-                <div style={{fontSize:11,color:T.greyM,marginTop:3}}>{new Date(n.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
-              </div>
-            </div>))}
-          </div>
-        </div>}
-      </div>
+      <div style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🔔</div>
       <div style={{fontSize:12,color:T.grey}}>{new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div>
+    </div>
+  </div>);
+}
+
+// ── GLOBAL NOTIFICATION BELL (rendered at App level) ──────────
+function NotifBell({notifications,onMarkRead,onNotifClick}){
+  const [show,setShow]=useState(false);
+  const unread=notifications.filter(n=>!n.is_read).length;
+  return(<div style={{position:"fixed",top:11,right:24,zIndex:1000}}>
+    <div style={{position:"relative"}}>
+      <div onClick={()=>setShow(s=>!s)} style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.10)"}}>🔔</div>
+      {unread>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#E74C3C",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,pointerEvents:"none"}}>{unread}</div>}
+      {show&&<div style={{position:"absolute",right:0,top:44,width:340,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",border:`1px solid ${T.greyM}`,zIndex:200,overflow:"hidden"}}>
+        <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyM}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:14,fontWeight:700,color:T.navy}}>Notifications</span>
+          {unread>0&&<span onClick={()=>{onMarkRead();}} style={{fontSize:11,color:"#2980B9",cursor:"pointer"}}>Mark all read</span>}
+        </div>
+        <div style={{maxHeight:360,overflowY:"auto"}}>
+          {notifications.length===0&&<div style={{padding:"24px 16px",textAlign:"center",color:T.grey,fontSize:13}}>No notifications yet</div>}
+          {notifications.map(n=>(<div key={n.id} onClick={()=>{onNotifClick(n);setShow(false);}} style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyL}`,display:"flex",gap:10,background:n.is_read?"#fff":T.off,cursor:"pointer"}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:n.is_read?T.greyM:"#E74C3C",flexShrink:0,marginTop:5}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:n.is_read?400:700,color:T.navy}}>{n.title}</div>
+              <div style={{fontSize:12,color:T.grey,marginTop:2,lineHeight:1.4}}>{n.message}</div>
+              <div style={{fontSize:11,color:T.greyM,marginTop:3}}>{new Date(n.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+            </div>
+          </div>))}
+        </div>
+      </div>}
     </div>
   </div>);
 }
@@ -264,7 +272,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
-function Dashboard({bens,user,onNavigate,notifications=[],onMarkRead,onBellClick,showNotifs,onNotifClick}){
+function Dashboard({bens,user,onNavigate}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[
     vis.length,
@@ -282,7 +290,7 @@ function Dashboard({bens,user,onNavigate,notifications=[],onMarkRead,onBellClick
     {label:"Female",             icon:"👩",   bg:"#E67E22"},
   ];
   return(<div className="fade-in">
-    <Topbar title="Dashboard" sub="View current tasks, activities and reports" notifications={notifications} onMarkRead={onMarkRead} onBellClick={onBellClick} showNotifs={showNotifs} onNotifClick={onNotifClick}/>
+    <Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
@@ -916,7 +924,6 @@ export default function App(){
   const [viewBen,setView]=useState(null); const [editBen,setEdit]=useState(null); const [sirBen,setSir]=useState(null); const [dashFilter,setDashFilter]=useState({});
   const [postModal,setPost]=useState(null); const [logoUrl,setLogoUrl]=useState(null);
   const [notifications,setNotifications]=useState([]);
-  const [showNotifs,setShowNotifs]=useState(false);
 
   // Users are now saved to Supabase - no localStorage needed
 
@@ -1048,17 +1055,7 @@ export default function App(){
     if(sirBen)  return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
     if(viewBen) return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)}/>;
     if(editBen||page==="ben-add") return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
-    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{nav(p,filter||{});}} notifications={notifications} onMarkRead={markAllRead} onBellClick={()=>setShowNotifs(s=>!s)} showNotifs={showNotifs} onNotifClick={(n)=>{
-      setShowNotifs(false);
-      if(n.type==="approval") nav("approvals");
-      else if(n.type==="followup"){
-        const ben=bens.find(b=>n.message.includes(b.name));
-        if(ben){setView(ben);setSir(null);setEdit(null);}
-      } else if(n.type==="approved"||n.type==="rejected"){
-        const ben=bens.find(b=>n.message.includes(b.name));
-        if(ben){setView(ben);setSir(null);setEdit(null);}
-      } else if(n.type==="assignment") nav("ben-list");
-    }}/>;
+    if(page==="dashboard") return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>{nav(p,filter||{});}}/>;
     if(page==="ben-list")  return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
     if(page==="posts")     return <PostsPage bens={bens} user={user}/>;
     if(page==="approvals"&&user.role==="Admin") return <ApprovalsPage bens={bens} setBens={setBens} users={users} addNotification={addNotification}/>;
@@ -1069,9 +1066,21 @@ export default function App(){
     return <Dashboard bens={bens} user={user}/>;
   }
 
+  function handleNotifClick(n){
+    if(n.type==="approval") nav("approvals");
+    else if(n.type==="followup"){
+      const ben=bens.find(b=>n.message&&n.message.includes(b.name));
+      if(ben){setView(ben);setSir(null);setEdit(null);setPage("ben-list");}
+    } else if(n.type==="approved"||n.type==="rejected"||n.type==="assignment"){
+      const ben=bens.find(b=>n.message&&n.message.includes(b.name));
+      if(ben){setView(ben);setSir(null);setEdit(null);setPage("ben-list");}
+    }
+  }
+
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
     <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl}/>
     <div style={{marginLeft:248,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
+    <NotifBell notifications={notifications} onMarkRead={markAllRead} onNotifClick={handleNotifClick}/>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
 }
