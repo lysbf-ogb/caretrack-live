@@ -158,12 +158,13 @@ function Topbar({title,sub}){
 }
 
 // ── GLOBAL NOTIFICATION BELL (rendered at App level) ──────────
-function NotifBell({notifications,onMarkRead,onNotifClick}){
+function NotifBell({notifications,onMarkRead,onNotifClick,onRefresh}){
   const [show,setShow]=useState(false);
   const unread=notifications.filter(n=>!n.is_read).length;
-  return(<div style={{position:"fixed",top:11,right:24,zIndex:1000}}>
+  function toggleBell(){setShow(s=>{if(!s&&onRefresh)onRefresh();return !s;});}
+  return(<div style={{position:"fixed",top:11,right:180,zIndex:9999}}>
     <div style={{position:"relative"}}>
-      <div onClick={()=>setShow(s=>!s)} style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.10)"}}>🔔</div>
+      <div onClick={toggleBell} style={{width:36,height:36,borderRadius:"50%",background:T.off,border:`1px solid ${T.greyM}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.10)"}}>🔔</div>
       {unread>0&&<div style={{position:"absolute",top:-4,right:-4,background:"#E74C3C",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,pointerEvents:"none"}}>{unread}</div>}
       {show&&<div style={{position:"absolute",right:0,top:44,width:340,background:"#fff",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.18)",border:`1px solid ${T.greyM}`,zIndex:200,overflow:"hidden"}}>
         <div style={{padding:"12px 16px",borderBottom:`1px solid ${T.greyM}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -942,7 +943,7 @@ export default function App(){
       if(data) setNotifications(data);
     }
     loadNotifs();
-    const interval=setInterval(loadNotifs,30000);
+    const interval=setInterval(loadNotifs,10000);
     return ()=>clearInterval(interval);
   },[user]);
 
@@ -1004,6 +1005,7 @@ export default function App(){
       background:f.background||"",
       assigned_to:f.assigned_to||user.id,
       enroll_date:f.enroll_date||today(),
+      approval_status:user.role==="Admin"?"Approved":"Pending",
     };
     try {
       if(editBen){
@@ -1019,12 +1021,12 @@ export default function App(){
         if(data) setBens(bs=>[...bs,{...data,posts:[]}]);
       }
     } catch(e){ console.log("Save error:",e); alert("Connection error. Please try again."); return; }
-    setEdit(null);nav("ben-list");
     // Notify admin when officer adds a beneficiary
     if(user.role!=="Admin"&&!editBen){
       const adminUser=users.find(u=>u.role==="Admin");
-      if(adminUser) await addNotification(adminUser.id,"approval","New beneficiary pending approval",`${f.name} was registered by ${user.name} and needs your approval.`);
+      if(adminUser) await addNotification(adminUser.id,"approval","New beneficiary pending approval",`${payload.name} was registered by ${user.name} and needs your approval.`);
     }
+    setEdit(null);nav("ben-list");
   }
 
   async function addPost(ben,text,author){
@@ -1080,7 +1082,10 @@ export default function App(){
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
     <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl}/>
     <div style={{marginLeft:248,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
-    <NotifBell notifications={notifications} onMarkRead={markAllRead} onNotifClick={handleNotifClick}/>
+    <NotifBell notifications={notifications} onMarkRead={markAllRead} onNotifClick={handleNotifClick} onRefresh={async()=>{
+      const {data}=await supabase.from("notifications").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20);
+      if(data) setNotifications(data);
+    }}/>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
 }
