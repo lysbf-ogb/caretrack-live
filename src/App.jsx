@@ -666,16 +666,38 @@ function MyAccount({user,users,setUsers}){
 
 function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
   const fileRef=useRef();
-  function handleLogo(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setLogoUrl(ev.target.result);r.readAsDataURL(file);}
+  const [logoMsg,setLogoMsg]=useState("");const [logoBusy,setLogoBusy]=useState(false);
+  async function handleLogo(e){
+    const file=e.target.files[0];if(!file)return;
+    setLogoBusy(true);setLogoMsg("");
+    try{
+      const ext=file.name.split(".").pop();
+      const path=`app-logo/logo.${ext}`;
+      const{error:upErr}=await supabase.storage.from("beneficiary-photos").upload(path,file,{upsert:true,contentType:file.type});
+      if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
+      const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
+      const url=urlData.publicUrl+"?t="+Date.now();
+      await supabase.from("settings").upsert({key:"logo_url",value:url});
+      setLogoUrl(url);setLogoMsg("✅ Logo saved!");
+    }catch(err){setLogoMsg("❌ Unexpected error. Please try again.");}
+    setLogoBusy(false);e.target.value="";
+  }
+  async function removeLogo(){
+    setLogoBusy(true);setLogoMsg("");
+    await supabase.from("settings").upsert({key:"logo_url",value:""});
+    setLogoUrl(null);setLogoMsg("✅ Logo removed.");
+    setLogoBusy(false);
+  }
   return(<div className="fade-in"><Topbar title="Settings" sub="App configuration — Admin only"/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
-        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",cursor:"pointer",background:T.off,marginBottom:14}} onClick={()=>fileRef.current.click()}>
-          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>Click to upload your logo</div></div>}
+        {logoMsg&&<div style={{background:logoMsg.includes("✅")?"#EAFAF1":"#FDEDEC",color:logoMsg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"9px 13px",fontSize:12,marginBottom:12}}>{logoMsg}</div>}
+        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",cursor:"pointer",background:T.off,marginBottom:14}} onClick={()=>!logoBusy&&fileRef.current.click()}>
+          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>{logoBusy?"Uploading...":"Click to upload your logo"}</div></div>}
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogo}/>
         </div>
-        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={()=>setLogoUrl(null)}>Remove</Btn>}</div>
+        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
@@ -688,7 +710,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.2.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.2.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -721,6 +743,13 @@ export default function App(){
 
   useEffect(()=>{
     loadAppUsers().then(u=>setUsers(u));
+  },[]);
+
+  useEffect(()=>{
+    async function loadLogo(){
+      try{const{data}=await supabase.from("settings").select("value").eq("key","logo_url").single();if(data&&data.value)setLogoUrl(data.value);}catch(e){}
+    }
+    loadLogo();
   },[]);
 
   useEffect(()=>{
