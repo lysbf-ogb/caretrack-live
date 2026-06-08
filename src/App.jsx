@@ -596,7 +596,7 @@ function UserMgmt({users,setUsers}){
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
       {showAdd&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Create New User</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}><FI label="Full Name *" value={form.name} onChange={v=>s("name",v)}/><FI label="Email *" value={form.email} onChange={v=>s("email",v)} type="email"/><FI label="Password *" value={form.password} onChange={v=>s("password",v)} type="password"/><FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer"]}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}><FI label="Full Name *" value={form.name} onChange={v=>s("name",v)}/><FI label="Email *" value={form.email} onChange={v=>s("email",v)} type="email"/><FI label="Password *" value={form.password} onChange={v=>s("password",v)} type="password"/><FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer","Admin"]}/></div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={addUser}>Create Account</Btn><Btn variant="secondary" onClick={()=>setShowAdd(false)}>Cancel</Btn></div>
       </div>}
       {editUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
@@ -688,7 +688,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.2.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.2.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
