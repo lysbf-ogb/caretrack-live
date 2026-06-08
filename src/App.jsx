@@ -204,6 +204,8 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const [gendF,setGendF]=useState("all");
   const [commF,setCommF]=useState("all");
   const [overdueF,setOverdueF]=useState(false);
+  const [yearF,setYearF]=useState("all");
+  const [quarterF,setQuarterF]=useState("all");
   const [sort,setSort]=useState("name-asc");
   useEffect(()=>{
     setCompF(initialFilter.comp?String(initialFilter.comp):"all");
@@ -213,11 +215,14 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
     setSearch("");
   },[initialFilter.comp,initialFilter.stat,initialFilter.overdue]);
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
+  const enrollYears=[...new Set(bens.map(b=>b.enroll_date?b.enroll_date.slice(0,4):null).filter(Boolean))].sort();
+  function getQuarter(dateStr){if(!dateStr)return null;const m=new Date(dateStr).getMonth()+1;if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4";}
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
-    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000)))
+    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
+  const enrollTag=yearF!=="all"||quarterF!=="all"?[yearF!=="all"?yearF:null,quarterF!=="all"?quarterF:null].filter(Boolean).join(" · "):null;
   return(<div className="fade-in"><Topbar title="Beneficiaries" sub="View and manage all beneficiary profiles"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
@@ -226,11 +231,17 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
           <div style={{flex:"1 1 150px"}}><Lbl c="Component"/><select value={compF} onChange={e=>setCompF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Components</option>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
           <div style={{flex:"1 1 130px"}}><Lbl c="Community"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option>{communities.map(c=><option key={c}>{c}</option>)}</select></div>
           <div style={{flex:"1 1 110px"}}><Lbl c="Status"/><select value={statF} onChange={e=>setStatF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option><option>Active</option><option>Completed</option><option>On Hold</option></select></div>
+          <div style={{width:1,height:36,background:T.greyM,alignSelf:"flex-end",marginBottom:1}}/>
+          <div style={{flex:"1 1 110px"}}><Lbl c="Enrol Year"/><select value={yearF} onChange={e=>setYearF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Years</option>{enrollYears.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
+          <div style={{flex:"1 1 130px"}}><Lbl c="Quarter"/><select value={quarterF} onChange={e=>setQuarterF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Quarters</option><option value="Q1">Q1 (Jan – Mar)</option><option value="Q2">Q2 (Apr – Jun)</option><option value="Q3">Q3 (Jul – Sep)</option><option value="Q4">Q4 (Oct – Dec)</option></select></div>
           <div style={{flex:"1 1 140px"}}><Lbl c="Sort By"/><select value={sort} onChange={e=>setSort(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="name-asc">Name A→Z</option><option value="name-desc">Name Z→A</option><option value="updated-desc">Last Updated ↓</option></select></div>
-          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setGendF("all");setOverdueF(false);setSort("name-asc");}}>Clear</Btn>
+          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setGendF("all");setOverdueF(false);setYearF("all");setQuarterF("all");setSort("name-asc");}}>Clear</Btn>
         </div>
-        {overdueF&&<div style={{marginTop:10,background:"#FDEDEC",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#922B21",fontWeight:700,display:"inline-block"}}>⚠️ Showing overdue beneficiaries only — <span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setOverdueF(false)}>clear filter</span></div>}
-        {!overdueF&&<div style={{marginTop:10,fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>}
+        <div style={{marginTop:10,display:"flex",flexWrap:"wrap",alignItems:"center",gap:8}}>
+          {overdueF&&<div style={{background:"#FDEDEC",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#922B21",fontWeight:700,display:"inline-block"}}>⚠️ Showing overdue beneficiaries only — <span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setOverdueF(false)}>clear filter</span></div>}
+          {enrollTag&&<span style={{background:"#EBF5FB",color:"#1A5276",padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>📅 Enrolled: {enrollTag}</span>}
+          <div style={{fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>
+        </div>
       </div>
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -726,7 +737,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
