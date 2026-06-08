@@ -226,7 +226,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
               <td style={{padding:"13px 16px"}}>{c&&<span style={{background:c.light,color:c.color,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.split(" ")[0]}</span></span>}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{b.community}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{officer(b.assigned_to)}</td>
-              <td style={{padding:"13px 16px",fontSize:12,color:b.last_follow_up?T.red:T.grey,fontWeight:b.last_follow_up?600:400}}>{b.last_follow_up||"Not yet"}</td>
+              {(()=>{const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;return(<td style={{padding:"13px 16px"}}><span style={{fontSize:12,fontWeight:600,color:overdue?"#fff":T.navy,background:overdue?"#C0392B":"transparent",padding:overdue?"3px 10px":"0",borderRadius:overdue?20:0,display:"inline-block"}}>{b.last_follow_up||"Not yet"}</span></td>);})()}
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
                 <button className="action-btn" onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
@@ -711,7 +711,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.2.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.2.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
