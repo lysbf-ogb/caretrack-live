@@ -7,6 +7,8 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3Nqa3B0c3dtc2pnY3NxemtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQyNzEsImV4cCI6MjA5NjAwMDI3MX0.V5Axs0KeuKVvM83qxrcItG8MJIQYw5TL9yOkF-2DpUI"
 );
 
+if(!window.XLSX){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";document.head.appendChild(s);}
+
 const DEMO_USERS = [
   { id:"admin-1",   email:"admin@ogb.org",  password:"admin123", name:"Mark Effah Yeboah", role:"Admin",            avatar:"MY" },
   { id:"officer-1", email:"kofi@ogb.org",   password:"pass123",  name:"Kofi Mensah",       role:"Programme Officer", avatar:"KM" },
@@ -223,9 +225,39 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
   const enrollTag=yearF!=="all"||quarterF!=="all"?[yearF!=="all"?yearF:null,quarterF!=="all"?quarterF:null].filter(Boolean).join(" · "):null;
+
+  function exportToExcel(){
+    const rows=vis.map(b=>({
+      "Beneficiary ID":b.bid||"",
+      "Full Name":b.name||"",
+      "Age":b.age||"",
+      "Gender":b.gender||"",
+      "Community":b.community||"",
+      "District":b.district||"",
+      "Region":b.region||"",
+      "Programme Component":COMPONENTS.find(c=>c.id===b.component_id)?.name||"",
+      "Enrolment Date":b.enroll_date||"",
+      "Status":b.status||"",
+      "Assigned Officer":users.find(u=>u.id===b.assigned_to)?.name||"",
+      "Last Follow-Up":b.last_follow_up||"Not yet",
+      "Education":b.education||"",
+      "Employment":b.employment||"",
+      "Disability":b.disability||"",
+    }));
+    const ws=XLSX.utils.json_to_sheet(rows);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Beneficiaries");
+    const date=new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb,`LYSBF_CYEP_Beneficiaries_${date}.xlsx`);
+  }
+
   return(<div className="fade-in"><Topbar title="Beneficiaries" sub="View and manage all beneficiary profiles"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
+          <div style={{fontSize:13,color:T.grey}}>{vis.length} {vis.length===1?"record":"records"} {(overdueF||enrollTag)?"(filtered)":""}</div>
+          <button onClick={exportToExcel} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 16px",borderRadius:8,background:"#1D6F42",color:"#fff",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Source Sans 3',sans-serif"}}>📊 Export to Excel</button>
+        </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
           <div style={{flex:"1 1 180px"}}><Lbl c="Search"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Name or ID..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/></div>
           <div style={{flex:"1 1 150px"}}><Lbl c="Component"/><select value={compF} onChange={e=>setCompF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Components</option>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
@@ -737,7 +769,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
