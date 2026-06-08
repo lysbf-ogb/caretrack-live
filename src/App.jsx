@@ -186,12 +186,34 @@ function Dashboard({bens,user,onNavigate}){
       </div></>)}
       <SH>Beneficiaries by Programme Component</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
-        {COMPONENTS.map(c=>{const count=vis.filter(b=>b.component_id===c.id).length;return(
-          <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})} style={{background:c.color,borderRadius:16,padding:"32px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
+        {COMPONENTS.map(c=>{
+          const inComp=vis.filter(b=>b.component_id===c.id);
+          const count=inComp.length;
+          const males=inComp.filter(b=>b.gender==="Male").length;
+          const females=inComp.filter(b=>b.gender==="Female").length;
+          const malePct=count>0?Math.round((males/count)*100):0;
+          return(
+          <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})} style={{background:c.color,borderRadius:16,padding:"32px 20px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
             <div style={{width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:28}}>{c.icon}</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.92)",fontWeight:700,marginBottom:16,lineHeight:1.4}}>{c.name}</div>
             <div style={{fontSize:56,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.78)",marginTop:8,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600}}>Total Beneficiaries</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.78)",marginTop:8,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,marginBottom:14}}>Total Beneficiaries</div>
+            {count>0&&(<>
+              <div style={{height:"0.5px",background:"rgba(255,255,255,0.25)",marginBottom:12}}/>
+              <div style={{height:5,borderRadius:3,background:"rgba(255,255,255,0.25)",overflow:"hidden",marginBottom:8}}>
+                <div style={{height:"100%",borderRadius:3,background:"rgba(255,255,255,0.85)",width:`${malePct}%`,transition:"width 0.3s"}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between"}}>
+                <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"rgba(255,255,255,0.88)",fontWeight:700}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:"rgba(255,255,255,0.9)"}}/>
+                  {males} Male
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:"rgba(255,255,255,0.70)",fontWeight:700}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:"rgba(255,255,255,0.45)"}}/>
+                  {females} Female
+                </div>
+              </div>
+            </>)}
           </div>);})}
       </div>
     </div>
@@ -770,7 +792,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
