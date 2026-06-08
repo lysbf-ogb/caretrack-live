@@ -43,6 +43,7 @@ const CSS=`
   .row-hover:hover{background:#EBF8FF!important;}
   .tab-btn:hover{background:#fff!important;color:#1A365D!important;}
   .action-btn:hover{filter:brightness(0.90);}
+  .upload-zone-hover:hover{border-color:#27AE60!important;background:#EAFAF1!important;}
   @media print{.no-print{display:none!important;}body{background:white;}}
   input:focus,select:focus,textarea:focus{border-color:#27AE60!important;box-shadow:0 0 0 3px rgba(39,174,96,0.15);outline:none;}
   .fade-in{animation:fadeIn 0.3s ease;}
@@ -77,6 +78,13 @@ function inits(n=""){return n.split(" ").map(w=>w[0]).join("").slice(0,2).toUppe
 function sPill(s){if(s==="Active")return{bg:"#EAFAF1",color:"#1D8348"};if(s==="Completed")return{bg:"#EBF5FB",color:"#1A5276"};return{bg:"#FEF9E7",color:"#9A7D0A"};}
 function today(){return new Date().toISOString().slice(0,10);}
 
+function BenAvatar({ben,size=38,fontSize=13}){
+  if(ben&&ben.photo_url){
+    return <img src={ben.photo_url} alt={ben.name} style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0}}/>;
+  }
+  return <div style={{width:size,height:size,borderRadius:"50%",background:aColor(ben?ben.name:""),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize,color:"#fff",flexShrink:0}}>{inits(ben?ben.name:"")}</div>;
+}
+
 const Pill=({s})=>{const{bg,color}=sPill(s);return <span style={{background:bg,color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>{s}</span>;};
 const Lbl=({c})=><div style={{fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8,marginBottom:5}}>{c}</div>;
 const FBox=({v})=><div style={{background:T.off,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,color:T.navy,minHeight:38}}>{v||"—"}</div>;
@@ -99,6 +107,7 @@ function Logo({size=40,color="#fff",url=null}){
   if(url)return <img src={url} alt="logo" style={{width:size,height:size,objectFit:"contain",borderRadius:6}}/>;
   return(<svg width={size} height={size} viewBox="0 0 100 100" fill="none"><path d="M50 18 C44 8 28 4 18 14 C8 24 10 42 22 50 C10 58 8 76 18 86 C28 96 44 92 50 82 C56 92 72 96 82 86 C92 76 90 58 78 50 C90 42 92 24 82 14 C72 4 56 8 50 18Z" stroke={color} strokeWidth="6" fill="none" strokeLinejoin="round" strokeLinecap="round"/><circle cx="50" cy="13" r="4" fill={color}/><circle cx="50" cy="87" r="4" fill={color}/><circle cx="13" cy="50" r="4" fill={color}/><circle cx="87" cy="50" r="4" fill={color}/></svg>);
 }
+
 function Topbar({title,sub}){
   return(<div style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 32px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
     <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}</div>
@@ -213,7 +222,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
           <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Component","Community","Assigned Officer","Last Follow-Up","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
           <tbody>
             {vis.map((b,i)=>{const c=comp(b.component_id);return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
-              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:38,height:38,borderRadius:"50%",background:aColor(b.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{inits(b.name)}</div><div><div style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</div><div style={{fontSize:11,color:T.grey}}>Age {b.age} · {b.gender} · {b.bid}</div></div></div></td>
+              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={b} size={38} fontSize={13}/><div><div style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</div><div style={{fontSize:11,color:T.grey}}>Age {b.age} · {b.gender} · {b.bid}</div></div></div></td>
               <td style={{padding:"13px 16px"}}>{c&&<span style={{background:c.light,color:c.color,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.split(" ")[0]}</span></span>}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{b.community}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{officer(b.assigned_to)}</td>
@@ -248,7 +257,7 @@ function FollowUpsTab({ben,user,onAddPost}){
     const text=newComment[postId];if(!text||!text.trim())return;
     setLoading(l=>({...l,[postId]:true}));
     const{data}=await supabase.from("comments").insert([{post_id:postId,author:user.name,author_role:user.role,text,created_at:new Date().toISOString()}]).select().single();
-    if(data){setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));setNewComment(n=>({...n,[postId]:""}));}
+    if(data){setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));setNewComment(n=>({...n,[postId]:""}))}
     setLoading(l=>({...l,[postId]:false}));
   }
   return(<div>
@@ -271,38 +280,114 @@ function FollowUpsTab({ben,user,onAddPost}){
   </div>);
 }
 
+function PhotoUpload({ben,user,onPhotoUpdate}){
+  const fileRef=useRef();
+  const [uploading,setUploading]=useState(false);
+  const [msg,setMsg]=useState("");
+  const canEdit=user.role==="Admin"||ben.assigned_to===user.id;
+  if(!canEdit)return null;
+
+  async function handleFile(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    if(file.size>2*1024*1024){setMsg("❌ File too large. Please use an image under 2MB.");return;}
+    if(!file.type.startsWith("image/")){setMsg("❌ Please select an image file (JPG or PNG).");return;}
+    setUploading(true);setMsg("");
+    try{
+      const ext=file.name.split(".").pop();
+      const path=`${ben.id}.${ext}`;
+      const{error:upErr}=await supabase.storage.from("beneficiary-photos").upload(path,file,{upsert:true,contentType:file.type});
+      if(upErr){setMsg("❌ Upload failed: "+upErr.message);setUploading(false);return;}
+      const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
+      const photoUrl=urlData.publicUrl+"?t="+Date.now();
+      const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:photoUrl}).eq("id",ben.id);
+      if(dbErr){setMsg("❌ Could not save photo URL: "+dbErr.message);setUploading(false);return;}
+      setMsg("✅ Photo uploaded successfully!");
+      onPhotoUpdate(photoUrl);
+    }catch(e){setMsg("❌ Unexpected error. Please try again.");}
+    setUploading(false);
+    e.target.value="";
+  }
+
+  async function removePhoto(){
+    if(!window.confirm("Remove this beneficiary's profile photo?"))return;
+    setUploading(true);setMsg("");
+    try{
+      const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:null}).eq("id",ben.id);
+      if(dbErr){setMsg("❌ Could not remove photo.");setUploading(false);return;}
+      setMsg("✅ Photo removed.");
+      onPhotoUpdate(null);
+    }catch(e){setMsg("❌ Unexpected error. Please try again.");}
+    setUploading(false);
+  }
+
+  return(<div style={{marginTop:14}}>
+    <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.55)",textTransform:"uppercase",letterSpacing:1.5,marginBottom:8,textAlign:"center"}}>Profile Photo</div>
+    {msg&&<div style={{fontSize:11,textAlign:"center",marginBottom:8,padding:"6px 10px",borderRadius:6,background:msg.includes("✅")?"rgba(39,174,96,0.25)":"rgba(192,57,43,0.25)",color:"#fff"}}>{msg}</div>}
+    <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{display:"none"}} onChange={handleFile}/>
+    {!ben.photo_url?(
+      <div className="upload-zone-hover" onClick={()=>!uploading&&fileRef.current.click()} style={{border:"1.5px dashed rgba(255,255,255,0.45)",borderRadius:10,padding:"12px 10px",textAlign:"center",cursor:uploading?"not-allowed":"pointer",transition:"all 0.2s"}}>
+        <div style={{fontSize:22,marginBottom:4}}>📷</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",fontWeight:700,marginBottom:2}}>{uploading?"Uploading...":"Upload Photo"}</div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,0.55)"}}>JPG or PNG · max 2MB</div>
+      </div>
+    ):(
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginBottom:8}}>Photo uploaded ✓</div>
+        <div style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>!uploading&&fileRef.current.click()} disabled={uploading} style={{padding:"5px 12px",borderRadius:6,border:"1px solid rgba(255,255,255,0.35)",background:"rgba(255,255,255,0.15)",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>🔄 Change</button>
+          <button onClick={removePhoto} disabled={uploading} style={{padding:"5px 12px",borderRadius:6,border:"1px solid rgba(192,57,43,0.5)",background:"rgba(192,57,43,0.25)",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>🗑 Remove</button>
+        </div>
+      </div>
+    )}
+  </div>);
+}
+
 const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"🏥"},{k:"education",label:"Education",icon:"📚"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"🫂"},{k:"followups",label:"Follow-Ups",icon:"💬"},{k:"documents",label:"Documents",icon:"📁"}];
 
-function Profile({ben,user,users,onBack,onAddPost,onSIR}){
+function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate}){
   const [tab,setTab]=useState("basic");
-  const comp=COMPONENTS.find(c=>c.id===ben.component_id);
-  const officer=users.find(u=>u.id===ben.assigned_to);
-  return(<div className="fade-in"><Topbar title={ben.name} sub={`Profile · ${ben.bid}`}/>
+  const [localBen,setLocalBen]=useState(ben);
+  useEffect(()=>{setLocalBen(ben);},[ben]);
+  const comp=COMPONENTS.find(c=>c.id===localBen.component_id);
+  const officer=users.find(u=>u.id===localBen.assigned_to);
+  function handlePhotoUpdate(url){
+    setLocalBen(b=>({...b,photo_url:url}));
+    onPhotoUpdate(localBen.id,url);
+  }
+  return(<div className="fade-in"><Topbar title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
     <div style={{padding:"24px 32px"}}>
-      <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back to List</Btn><Btn variant="navy" onClick={()=>onSIR(ben)}>📝 Generate SIR</Btn></div>
+      <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back to List</Btn><Btn variant="navy" onClick={()=>onSIR(localBen)}>📝 Generate SIR</Btn></div>
       <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
         <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
           <div style={{background:comp?.color||"#27AE60",padding:"28px 20px",textAlign:"center"}}>
-            <div style={{width:70,height:70,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:26,color:"#fff",margin:"0 auto 12px"}}>{inits(ben.name)}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:"#fff"}}>{ben.name}</div>
+            <div style={{position:"relative",width:80,height:80,margin:"0 auto 12px"}}>
+              {localBen.photo_url?(
+                <img src={localBen.photo_url} alt={localBen.name} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:"3px solid rgba(255,255,255,0.6)"}}/>
+              ):(
+                <div style={{width:80,height:80,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:28,color:"#fff",border:"3px solid rgba(255,255,255,0.4)"}}>{inits(localBen.name)}</div>
+              )}
+            </div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:"#fff"}}>{localBen.name}</div>
             <div style={{fontSize:12,color:"rgba(255,255,255,0.85)",marginTop:3}}>{comp?.icon} {comp?.name}</div>
-            <div style={{marginTop:10}}><Pill s={ben.status}/></div>
+            <div style={{marginTop:10}}><Pill s={localBen.status}/></div>
+            <PhotoUpload ben={localBen} user={user} onPhotoUpdate={handlePhotoUpdate}/>
           </div>
-          <div style={{padding:"0 20px 20px"}}>{[["Beneficiary ID",ben.bid],["Age / Gender",`${ben.age} · ${ben.gender}`],["Community",ben.community],["Enrolled",ben.enroll_date],["Officer",officer?.name||"—"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:11,fontWeight:700,color:T.grey}}>{l}</span><span style={{fontSize:12,color:T.navy,textAlign:"right"}}>{v||"—"}</span></div>))}</div>
+          <div style={{padding:"0 20px 20px"}}>{[["Beneficiary ID",localBen.bid],["Age / Gender",`${localBen.age} · ${localBen.gender}`],["Community",localBen.community],["Enrolled",localBen.enroll_date],["Officer",officer?.name||"—"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"9px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:11,fontWeight:700,color:T.grey}}>{l}</span><span style={{fontSize:12,color:T.navy,textAlign:"right"}}>{v||"—"}</span></div>))}</div>
         </div>
         <div>
           <div style={{display:"flex",flexWrap:"wrap",gap:4,background:T.off,borderRadius:10,padding:4,marginBottom:16}}>
             {TABS.map(t=>(<button key={t.k} className="tab-btn" onClick={()=>setTab(t.k)} style={{padding:"8px 13px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontFamily:"'Source Sans 3',sans-serif",display:"flex",alignItems:"center",gap:5,transition:"all 0.18s",background:tab===t.k?"#fff":"transparent",color:tab===t.k?T.navy:T.grey,fontWeight:tab===t.k?700:400,boxShadow:tab===t.k?"0 1px 4px rgba(0,0,0,0.10)":"none"}}><span>{t.icon}</span><span>{t.label}</span></button>))}
           </div>
           <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            {tab==="basic"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Full Name",ben.name],["Date of Birth",ben.dob],["Age",ben.age],["Gender",ben.gender],["Nationality",ben.nationality],["Tribe",ben.tribe],["Religion",ben.religion],["Community",ben.community],["Address",ben.address],["Region",ben.region],["District",ben.district],["City",ben.city]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
-            {tab==="programme"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Beneficiary ID",ben.bid],["Component",`${comp?.icon} ${comp?.name}`],["Enrolment Date",ben.enroll_date],["Status",ben.status]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
-            {tab==="health"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Vulnerability on Arrival",ben.vuln_on_arrival],["Health Status",ben.health],["Height",ben.height],["Weight",ben.weight],["Ghana Card / NHIS",ben.ghana_card],["Disability",ben.disability],["Medical Condition",ben.med_condition]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
-            {tab==="education"&&<div><Lbl c="Educational Level"/><FBox v={ben.education}/></div>}
-            {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={ben.family}/></div>}
-            {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",ben.occupation],["Employment Status",ben.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
-            {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={ben.disability}/></div>}
-            {tab==="followups"&&<FollowUpsTab ben={ben} user={user} onAddPost={onAddPost}/>}
+            {tab==="basic"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Full Name",localBen.name],["Date of Birth",localBen.dob],["Age",localBen.age],["Gender",localBen.gender],["Nationality",localBen.nationality],["Tribe",localBen.tribe],["Religion",localBen.religion],["Community",localBen.community],["Address",localBen.address],["Region",localBen.region],["District",localBen.district],["City",localBen.city]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
+            {tab==="programme"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Beneficiary ID",localBen.bid],["Component",`${comp?.icon} ${comp?.name}`],["Enrolment Date",localBen.enroll_date],["Status",localBen.status]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
+            {tab==="health"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Vulnerability on Arrival",localBen.vuln_on_arrival],["Health Status",localBen.health],["Height",localBen.height],["Weight",localBen.weight],["Ghana Card / NHIS",localBen.ghana_card],["Disability",localBen.disability],["Medical Condition",localBen.med_condition]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
+            {tab==="education"&&<div><Lbl c="Educational Level"/><FBox v={localBen.education}/></div>}
+            {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={localBen.family}/></div>}
+            {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",localBen.occupation],["Employment Status",localBen.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
+            {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={localBen.disability}/></div>}
+            {tab==="followups"&&<FollowUpsTab ben={localBen} user={user} onAddPost={onAddPost}/>}
             {tab==="documents"&&<div style={{textAlign:"center",padding:"36px 0"}}><div style={{fontSize:44,marginBottom:12}}>📁</div><div style={{color:T.grey,fontSize:14,marginBottom:16}}>No documents uploaded yet.</div><Btn variant="primary">+ Upload Document</Btn></div>}
           </div>
         </div>
@@ -320,6 +405,7 @@ function SIRView({ben,users,onBack}){
       <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back</Btn><Btn variant="navy" onClick={()=>window.print()}>🖨 Print as PDF</Btn></div>
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
         <div style={{textAlign:"center",borderBottom:`2px solid ${T.navy}`,paddingBottom:20,marginBottom:24}}>
+          {ben.photo_url&&<img src={ben.photo_url} alt={ben.name} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.navy}`,marginBottom:12,display:"block",margin:"0 auto 12px"}}/>}
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>LAWYER YAW SARPONG BOATENG FOUNDATION</div>
           <div style={{fontSize:13,color:T.slate,marginTop:4}}>Community Youth Empowerment Programme (CYEP)</div>
           <div style={{fontSize:16,fontWeight:700,color:"#27AE60",marginTop:10,textTransform:"uppercase",letterSpacing:2}}>Social Inquiry Report</div>
@@ -414,11 +500,11 @@ function BenForm({user,edit,users,onSave,onCancel}){
 
 function PostsPage({bens,user}){
   const mine=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
-  const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
+  const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id,photo_url:b.photo_url}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
   return(<div className="fade-in"><Topbar title="Posts" sub="Your latest follow-up notes and updates"/>
     <div style={{padding:"24px 32px"}}>
       {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet.</div>}
-      {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div><div style={{fontSize:12,color:T.grey}}>{p.date}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
+      {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={{name:p.benName,photo_url:p.photo_url}} size={32} fontSize={11}/><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div></div><div style={{fontSize:12,color:T.grey}}>{p.date}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
     </div>
   </div>);
 }
@@ -530,7 +616,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.0.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.1.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -586,10 +672,15 @@ export default function App(){
     setPage(p);
   }
 
+  function handlePhotoUpdate(benId,photoUrl){
+    setBens(bs=>bs.map(b=>b.id===benId?{...b,photo_url:photoUrl}:b));
+    if(viewBen&&viewBen.id===benId)setView(v=>({...v,photo_url:photoUrl}));
+  }
+
   async function saveBen(f){
     const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:f.assigned_to||user.id,enroll_date:f.enroll_date||today()};
     try{
-      if(editBen){const{data,error}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select().single();if(error){alert("Error: "+error.message);return;}if(data){const{data:posts}=await supabase.from("posts").select("*").eq("beneficiary_id",data.id);setBens(bs=>bs.map(b=>b.id===editBen.id?{...data,posts:posts||[]}:b));}}
+      if(editBen){const{data,error}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select().single();if(error){alert("Error: "+error.message);return;}if(data){const{data:posts}=await supabase.from("posts").select("*").eq("beneficiary_id",data.id);setBens(bs=>bs.map(b=>b.id===editBen.id?{...data,photo_url:editBen.photo_url,posts:posts||[]}:b));}}
       else{const{data,error}=await supabase.from("beneficiaries").insert([payload]).select().single();if(error){alert("Error: "+error.message);return;}if(data)setBens(bs=>[...bs,{...data,posts:[]}]);}
     }catch(e){alert("Connection error. Please try again.");}
     setEdit(null);nav("ben-list");
@@ -609,7 +700,7 @@ export default function App(){
 
   function renderPage(){
     if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
-    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)}/>;
+    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)} onPhotoUpdate={handlePhotoUpdate}/>;
     if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
     if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})}/>;
     if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
