@@ -160,6 +160,7 @@ function Dashboard({bens,user,onNavigate}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
+  const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
   return(<div className="fade-in"><Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
@@ -170,6 +171,17 @@ function Dashboard({bens,user,onNavigate}){
           <div style={{fontSize:11,color:"rgba(255,255,255,0.88)",textTransform:"uppercase",letterSpacing:1.5,fontWeight:700,marginTop:10}}>{s.label}</div>
         </div>))}
       </div>
+      {overdueCount>0&&(<><SH>Follow-Up Alerts</SH>
+      <div onClick={()=>onNavigate("ben-list",{overdue:true})} style={{background:"#FDEDEC",border:"1px solid #F1948A",borderRadius:12,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:36,cursor:"pointer",transition:"all 0.18s"}} className="card-hover">
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"#C0392B",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>⚠️</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:700,color:"#922B21",marginBottom:3}}>{overdueCount} {overdueCount===1?"beneficiary":"beneficiaries"} overdue for a follow-up</div>
+            <div style={{fontSize:12,color:"#C0392B"}}>No contact recorded in the last 3 months or more</div>
+          </div>
+        </div>
+        <div style={{padding:"8px 18px",borderRadius:8,background:"#C0392B",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>View overdue list →</div>
+      </div></>)}
       <SH>Beneficiaries by Programme Component</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
         {COMPONENTS.map(c=>{const count=vis.filter(b=>b.component_id===c.id).length;return(
@@ -191,16 +203,18 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   const [statF,setStatF]=useState("all");
   const [gendF,setGendF]=useState("all");
   const [commF,setCommF]=useState("all");
+  const [overdueF,setOverdueF]=useState(false);
   const [sort,setSort]=useState("name-asc");
   useEffect(()=>{
     setCompF(initialFilter.comp?String(initialFilter.comp):"all");
     setStatF(!isGender&&initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
     setGendF(isGender?initialFilter.stat:"all");
+    setOverdueF(initialFilter.overdue===true);
     setSearch("");
-  },[initialFilter.comp,initialFilter.stat]);
+  },[initialFilter.comp,initialFilter.stat,initialFilter.overdue]);
   const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
-    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF))
+    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000)))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
@@ -213,9 +227,10 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
           <div style={{flex:"1 1 130px"}}><Lbl c="Community"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option>{communities.map(c=><option key={c}>{c}</option>)}</select></div>
           <div style={{flex:"1 1 110px"}}><Lbl c="Status"/><select value={statF} onChange={e=>setStatF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option><option>Active</option><option>Completed</option><option>On Hold</option></select></div>
           <div style={{flex:"1 1 140px"}}><Lbl c="Sort By"/><select value={sort} onChange={e=>setSort(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="name-asc">Name A→Z</option><option value="name-desc">Name Z→A</option><option value="updated-desc">Last Updated ↓</option></select></div>
-          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setGendF("all");setSort("name-asc");}}>Clear</Btn>
+          <Btn variant="secondary" onClick={()=>{setSearch("");setCompF("all");setCommF("all");setStatF("all");setGendF("all");setOverdueF(false);setSort("name-asc");}}>Clear</Btn>
         </div>
-        <div style={{marginTop:10,fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>
+        {overdueF&&<div style={{marginTop:10,background:"#FDEDEC",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#922B21",fontWeight:700,display:"inline-block"}}>⚠️ Showing overdue beneficiaries only — <span style={{cursor:"pointer",textDecoration:"underline"}} onClick={()=>setOverdueF(false)}>clear filter</span></div>}
+        {!overdueF&&<div style={{marginTop:10,fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>}
       </div>
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -711,7 +726,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.2.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
