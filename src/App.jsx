@@ -857,7 +857,7 @@ function Settings({logoUrl,setLogoUrl,sidebarPhotoUrl,setSidebarPhotoUrl,sidebar
 
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -894,22 +894,17 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    async function loadLogo(){
-      try{const{data}=await supabase.from("settings").select("value").eq("key","logo_url").single();if(data&&data.value)setLogoUrl(data.value);}catch(e){}
-    }
-    loadLogo();
-  },[]);
-
-  useEffect(()=>{
-    async function loadSidebarSettings(){
+    async function loadSettings(){
       try{
-        const{data:photoData}=await supabase.from("settings").select("value").eq("key","sidebar_photo_url").single();
-        if(photoData&&photoData.value)setSidebarPhotoUrl(photoData.value);
-        const{data:opacityData}=await supabase.from("settings").select("value").eq("key","sidebar_opacity").single();
-        if(opacityData&&opacityData.value)setSidebarOpacity(parseFloat(opacityData.value));
-      }catch(e){}
+        const{data,error}=await supabase.from("settings").select("key,value");
+        if(error||!data)return;
+        const map={};data.forEach(r=>{if(r.key)map[r.key]=r.value;});
+        if(map["logo_url"])setLogoUrl(map["logo_url"]);
+        if(map["sidebar_photo_url"])setSidebarPhotoUrl(map["sidebar_photo_url"]);
+        if(map["sidebar_opacity"])setSidebarOpacity(parseFloat(map["sidebar_opacity"]));
+      }catch(e){console.log("Settings load error:",e);}
     }
-    loadSidebarSettings();
+    loadSettings();
   },[]);
 
   useEffect(()=>{
