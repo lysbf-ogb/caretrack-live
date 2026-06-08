@@ -140,11 +140,13 @@ function Login({onLogin,users,logoUrl}){
   </div>);
 }
 
-function Sidebar({user,page,setPage,onLogout,logoUrl}){
+function Sidebar({user,page,setPage,onLogout,logoUrl,sidebarPhotoUrl,sidebarOpacity}){
   const [benOpen,setBen]=useState(true);const [sirOpen,setSir]=useState(false);
   const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)} style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{fontSize:sub?14:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></div>);
   const G=({label,icon,open,setOpen,children})=>(<><div className="nav-item" onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.82)",fontSize:13,marginBottom:2,transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></span><span style={{fontSize:10,opacity:0.6}}>{open?"▲":"▼"}</span></div>{open&&children}</>);
   return(<div className="no-print" style={{width:248,minHeight:"100vh",background:`linear-gradient(180deg,#1E8449 0%,#27AE60 100%)`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:100,overflowY:"auto"}}>
+    {sidebarPhotoUrl&&<img src={sidebarPhotoUrl} alt="" style={{position:"absolute",bottom:0,left:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center",opacity:sidebarOpacity,pointerEvents:"none",zIndex:0}}/>}
+    <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",flex:1}}>
     <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff"}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase"}}>LYSBF · CYEP</div></div></div></div>
     <div style={{padding:"14px 10px",flex:1}}>
       <NI label="Dashboard" icon="🏠" p="dashboard"/>
@@ -155,6 +157,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
       {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
     </div>
     <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18}}>⇠</span></div></div>
+    </div>
   </div>);
 }
 
@@ -746,9 +749,12 @@ function MyAccount({user,users,setUsers}){
   </div>);
 }
 
-function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
-  const fileRef=useRef();
+function Settings({logoUrl,setLogoUrl,sidebarPhotoUrl,setSidebarPhotoUrl,sidebarOpacity,setSidebarOpacity,user,users,setUsers}){
+  const fileRef=useRef();const sidebarRef=useRef();
   const [logoMsg,setLogoMsg]=useState("");const [logoBusy,setLogoBusy]=useState(false);
+  const [sidebarMsg,setSidebarMsg]=useState("");const [sidebarBusy,setSidebarBusy]=useState(false);
+  const [localOpacity,setLocalOpacity]=useState(Math.round((sidebarOpacity||0.15)*100));
+
   async function handleLogo(e){
     const file=e.target.files[0];if(!file)return;
     setLogoBusy(true);setLogoMsg("");
@@ -770,6 +776,33 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
     setLogoUrl(null);setLogoMsg("✅ Logo removed.");
     setLogoBusy(false);
   }
+  async function handleSidebarPhoto(e){
+    const file=e.target.files[0];if(!file)return;
+    setSidebarBusy(true);setSidebarMsg("");
+    try{
+      const ext=file.name.split(".").pop();
+      const path=`sidebar-photo/sidebar.${ext}`;
+      const{error:upErr}=await supabase.storage.from("beneficiary-photos").upload(path,file,{upsert:true,contentType:file.type});
+      if(upErr){setSidebarMsg("❌ Upload failed: "+upErr.message);setSidebarBusy(false);return;}
+      const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
+      const url=urlData.publicUrl+"?t="+Date.now();
+      await supabase.from("settings").upsert({key:"sidebar_photo_url",value:url});
+      setSidebarPhotoUrl(url);setSidebarMsg("✅ Sidebar photo saved!");
+    }catch(err){setSidebarMsg("❌ Unexpected error. Please try again.");}
+    setSidebarBusy(false);e.target.value="";
+  }
+  async function removeSidebarPhoto(){
+    setSidebarBusy(true);setSidebarMsg("");
+    await supabase.from("settings").upsert({key:"sidebar_photo_url",value:""});
+    setSidebarPhotoUrl(null);setSidebarMsg("✅ Photo removed.");
+    setSidebarBusy(false);
+  }
+  async function saveOpacity(val){
+    const dec=val/100;
+    setSidebarOpacity(dec);
+    await supabase.from("settings").upsert({key:"sidebar_opacity",value:String(dec)});
+  }
+
   return(<div className="fade-in"><Topbar title="Settings" sub="App configuration — Admin only"/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
@@ -781,6 +814,37 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
         </div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>
       </div>
+
+      <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <SH>Sidebar Photo</SH>
+        {sidebarMsg&&<div style={{background:sidebarMsg.includes("✅")?"#EAFAF1":"#FDEDEC",color:sidebarMsg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"9px 13px",fontSize:12,marginBottom:12}}>{sidebarMsg}</div>}
+        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"20px",textAlign:"center",cursor:"pointer",background:T.off,marginBottom:12}} onClick={()=>!sidebarBusy&&sidebarRef.current.click()}>
+          {sidebarPhotoUrl?<img src={sidebarPhotoUrl} alt="sidebar" style={{width:80,height:80,objectFit:"cover",objectPosition:"top",borderRadius:8}}/>:<div><div style={{fontSize:40,marginBottom:8}}>🖼️</div><div style={{fontSize:13,color:T.grey}}>{sidebarBusy?"Uploading...":"Click to upload a photo"}</div><div style={{fontSize:11,color:T.grey,marginTop:4}}>Person, programme, or any image</div></div>}
+          <input ref={sidebarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleSidebarPhoto}/>
+        </div>
+        <div style={{display:"flex",gap:10,marginBottom:sidebarPhotoUrl?16:0}}><Btn variant="primary" onClick={()=>!sidebarBusy&&sidebarRef.current.click()}>🖼️ {sidebarPhotoUrl?"Change Photo":"Upload Photo"}</Btn>{sidebarPhotoUrl&&<Btn variant="secondary" onClick={removeSidebarPhoto}>Remove</Btn>}</div>
+        {sidebarPhotoUrl&&<>
+          <div style={{marginTop:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <Lbl c="Opacity"/>
+              <span style={{background:"#EAFAF1",color:"#1D8348",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{localOpacity}%</span>
+            </div>
+            <input type="range" min="5" max="40" value={localOpacity} onChange={e=>setLocalOpacity(Number(e.target.value))} onMouseUp={e=>saveOpacity(Number(e.target.value))} onTouchEnd={e=>saveOpacity(localOpacity)} style={{width:"100%",accentColor:"#27AE60",cursor:"pointer"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.grey,marginTop:4}}><span>Very faint (5%)</span><span>More visible (40%)</span></div>
+          </div>
+          <div style={{marginTop:16}}>
+            <Lbl c="Live Preview"/>
+            <div style={{borderRadius:10,overflow:"hidden",height:140,position:"relative"}}>
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#1E8449 0%,#27AE60 100%)"}}/>
+              <img src={sidebarPhotoUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"top center",opacity:localOpacity/100,pointerEvents:"none"}}/>
+              <div style={{position:"absolute",inset:0,padding:"10px 12px",display:"flex",flexDirection:"column",gap:6}}>
+                {[80,65,55,70,50].map((w,i)=><div key={i} style={{height:9,borderRadius:4,background:`rgba(255,255,255,${i===0?0.6:0.3})`,width:`${w}%`}}/>)}
+              </div>
+            </div>
+          </div>
+        </>}
+      </div>
+
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
         <div style={{background:`linear-gradient(135deg,#1A252F,#27AE60)`,borderRadius:12,padding:"24px",textAlign:"center",color:"#fff"}}>
@@ -790,9 +854,10 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
           <a href="https://lysbfoundation.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:"#E74C3C",color:"#fff",padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
         </div>
       </div>
+
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -818,6 +883,7 @@ export default function App(){
   const [bens,setBens]=useState([]);const [users,setUsers]=useState(DEMO_USERS);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
+  const [sidebarPhotoUrl,setSidebarPhotoUrl]=useState(null);const [sidebarOpacity,setSidebarOpacity]=useState(0.15);
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
@@ -832,6 +898,18 @@ export default function App(){
       try{const{data}=await supabase.from("settings").select("value").eq("key","logo_url").single();if(data&&data.value)setLogoUrl(data.value);}catch(e){}
     }
     loadLogo();
+  },[]);
+
+  useEffect(()=>{
+    async function loadSidebarSettings(){
+      try{
+        const{data:photoData}=await supabase.from("settings").select("value").eq("key","sidebar_photo_url").single();
+        if(photoData&&photoData.value)setSidebarPhotoUrl(photoData.value);
+        const{data:opacityData}=await supabase.from("settings").select("value").eq("key","sidebar_opacity").single();
+        if(opacityData&&opacityData.value)setSidebarOpacity(parseFloat(opacityData.value));
+      }catch(e){}
+    }
+    loadSidebarSettings();
   },[]);
 
   useEffect(()=>{
@@ -891,13 +969,13 @@ export default function App(){
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens}/>;
-    if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
+    if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} sidebarPhotoUrl={sidebarPhotoUrl} setSidebarPhotoUrl={setSidebarPhotoUrl} sidebarOpacity={sidebarOpacity} setSidebarOpacity={setSidebarOpacity} user={user} users={users} setUsers={setUsers}/>;
     if(page.startsWith("sir"))return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})}/>;
   }
 
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
-    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl}/>
+    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl} sidebarPhotoUrl={sidebarPhotoUrl} sidebarOpacity={sidebarOpacity}/>
     <div className="print-main" style={{marginLeft:248,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
