@@ -765,14 +765,14 @@ function Settings({logoUrl,setLogoUrl,sidebarPhotoUrl,setSidebarPhotoUrl,sidebar
       if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
       const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
       const url=urlData.publicUrl+"?t="+Date.now();
-      await supabase.from("settings").upsert({key:"logo_url",value:url});
+      await supabase.from("settings").upsert({key:"logo_url",value:url},{onConflict:"key"});
       setLogoUrl(url);setLogoMsg("✅ Logo saved!");
     }catch(err){setLogoMsg("❌ Unexpected error. Please try again.");}
     setLogoBusy(false);e.target.value="";
   }
   async function removeLogo(){
     setLogoBusy(true);setLogoMsg("");
-    await supabase.from("settings").upsert({key:"logo_url",value:""});
+    await supabase.from("settings").upsert({key:"logo_url",value:""},{onConflict:"key"});
     setLogoUrl(null);setLogoMsg("✅ Logo removed.");
     setLogoBusy(false);
   }
@@ -786,21 +786,21 @@ function Settings({logoUrl,setLogoUrl,sidebarPhotoUrl,setSidebarPhotoUrl,sidebar
       if(upErr){setSidebarMsg("❌ Upload failed: "+upErr.message);setSidebarBusy(false);return;}
       const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
       const url=urlData.publicUrl+"?t="+Date.now();
-      await supabase.from("settings").upsert({key:"sidebar_photo_url",value:url});
+      await supabase.from("settings").upsert({key:"sidebar_photo_url",value:url},{onConflict:"key"});
       setSidebarPhotoUrl(url);setSidebarMsg("✅ Sidebar photo saved!");
     }catch(err){setSidebarMsg("❌ Unexpected error. Please try again.");}
     setSidebarBusy(false);e.target.value="";
   }
   async function removeSidebarPhoto(){
     setSidebarBusy(true);setSidebarMsg("");
-    await supabase.from("settings").upsert({key:"sidebar_photo_url",value:""});
+    await supabase.from("settings").upsert({key:"sidebar_photo_url",value:""},{onConflict:"key"});
     setSidebarPhotoUrl(null);setSidebarMsg("✅ Photo removed.");
     setSidebarBusy(false);
   }
   async function saveOpacity(val){
     const dec=val/100;
     setSidebarOpacity(dec);
-    await supabase.from("settings").upsert({key:"sidebar_opacity",value:String(dec)});
+    await supabase.from("settings").upsert({key:"sidebar_opacity",value:String(dec)},{onConflict:"key"});
   }
 
   return(<div className="fade-in"><Topbar title="Settings" sub="App configuration — Admin only"/>
@@ -857,7 +857,7 @@ function Settings({logoUrl,setLogoUrl,sidebarPhotoUrl,setSidebarPhotoUrl,sidebar
 
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
