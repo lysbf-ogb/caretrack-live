@@ -277,13 +277,14 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
       </div>
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Component","Community","Assigned Officer","Last Follow-Up","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Component","Community","Assigned Officer","Follow-Ups","Last Follow-Up","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
           <tbody>
-            {vis.map((b,i)=>{const c=comp(b.component_id);return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
+            {vis.map((b,i)=>{const c=comp(b.component_id);const fuCount=(b.posts||[]).length;const fuBg=fuCount===0?"#FDEDEC":fuCount<=3?"#FEF9E7":"#EAFAF1";const fuColor=fuCount===0?"#922B21":fuCount<=3?"#7D6608":"#1D8348";return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={b} size={38} fontSize={13}/><div><div style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</div><div style={{fontSize:11,color:T.grey}}>Age {b.age} · {b.gender} · {b.bid}</div></div></div></td>
               <td style={{padding:"13px 16px"}}>{c&&<span style={{background:c.light,color:c.color,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.split(" ")[0]}</span></span>}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{b.community}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{officer(b.assigned_to)}</td>
+              <td style={{padding:"13px 16px"}}><span style={{background:fuBg,color:fuColor,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>💬 {fuCount} {fuCount===1?"visit":"visits"}</span></td>
               {(()=>{const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;return(<td style={{padding:"13px 16px"}}><span style={{fontSize:12,fontWeight:600,color:overdue?"#fff":T.navy,background:overdue?"#C0392B":"transparent",padding:overdue?"3px 10px":"0",borderRadius:overdue?20:0,display:"inline-block"}}>{b.last_follow_up||"Not yet"}</span></td>);})()}
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
@@ -292,7 +293,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
                 <button className="action-btn" onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
               </div></td>
             </tr>);})}
-            {vis.length===0&&<tr><td colSpan={7} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
+            {vis.length===0&&<tr><td colSpan={8} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -769,7 +770,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
