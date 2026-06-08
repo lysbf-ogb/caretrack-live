@@ -52,6 +52,8 @@ const CSS=`
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
   .spin{animation:spin 1s linear infinite;display:inline-block;}
   @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .sidebar-transition{transition:width 0.25s ease,opacity 0.25s ease;}
+  .main-transition{transition:margin-left 0.25s ease;}
 `;
 
 const T={white:"#FFFFFF",navy:"#1A252F",slate:"#2A4365",green:"#27AE60",off:"#F7FAFC",grey:"#718096",greyL:"#EDF2F7",greyM:"#CBD5E0",red:"#C0392B",redL:"#FDEDEC"};
@@ -110,9 +112,14 @@ function Logo({size=40,color="#fff",url=null}){
   return(<svg width={size} height={size} viewBox="0 0 100 100" fill="none"><path d="M50 18 C44 8 28 4 18 14 C8 24 10 42 22 50 C10 58 8 76 18 86 C28 96 44 92 50 82 C56 92 72 96 82 86 C92 76 90 58 78 50 C90 42 92 24 82 14 C72 4 56 8 50 18Z" stroke={color} strokeWidth="6" fill="none" strokeLinejoin="round" strokeLinecap="round"/><circle cx="50" cy="13" r="4" fill={color}/><circle cx="50" cy="87" r="4" fill={color}/><circle cx="13" cy="50" r="4" fill={color}/><circle cx="87" cy="50" r="4" fill={color}/></svg>);
 }
 
-function Topbar({title,sub}){
-  return(<div className="no-print" style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 32px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-    <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}</div>
+function Topbar({title,sub,onToggle}){
+  return(<div className="no-print" style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 20px 0 16px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+    <div style={{display:"flex",alignItems:"center",gap:12}}>
+      <button onClick={onToggle} aria-label="Toggle sidebar" style={{width:34,height:34,borderRadius:8,border:`1px solid ${T.greyM}`,background:T.off,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.15s"}}>
+        <span style={{fontSize:16,lineHeight:1}}>☰</span>
+      </button>
+      <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}</div>
+    </div>
     <div style={{fontSize:12,color:T.grey}}>{new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div>
   </div>);
 }
@@ -140,30 +147,32 @@ function Login({onLogin,users,logoUrl}){
   </div>);
 }
 
-function Sidebar({user,page,setPage,onLogout,logoUrl}){
+function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
   const [benOpen,setBen]=useState(true);const [sirOpen,setSir]=useState(false);
-  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)} style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{fontSize:sub?14:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></div>);
-  const G=({label,icon,open,setOpen,children})=>(<><div className="nav-item" onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.82)",fontSize:13,marginBottom:2,transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif"}}><span style={{display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></span><span style={{fontSize:10,opacity:0.6}}>{open?"▲":"▼"}</span></div>{open&&children}</>);
-  return(<div className="no-print" style={{width:248,minHeight:"100vh",background:`linear-gradient(180deg,#1E8449 0%,#27AE60 100%)`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:100,overflowY:"auto"}}>
-    <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff"}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase"}}>LYSBF · CYEP</div></div></div></div>
-    <div style={{padding:"14px 10px",flex:1}}>
-      <NI label="Dashboard" icon="🏠" p="dashboard"/>
-      <G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/><NI label="Add" icon="➕" p="ben-add" sub/></G>
-      <G label="SIR" icon="📝" open={sirOpen} setOpen={setSir}><NI label="List" icon="📋" p="sir-list" sub/><NI label="Add" icon="➕" p="sir-add" sub/><NI label="Archive" icon="🗄" p="sir-archive" sub/></G>
-      <NI label="Posts" icon="💬" p="posts"/>
-      <NI label="My Account" icon="👤" p="my-account"/>
-      {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
+  const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)} style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif",whiteSpace:"nowrap"}}><span style={{fontSize:sub?14:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></div>);
+  const G=({label,icon,open,setOpen,children})=>(<><div className="nav-item" onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.82)",fontSize:13,marginBottom:2,transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif",whiteSpace:"nowrap"}}><span style={{display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></span><span style={{fontSize:10,opacity:0.6}}>{open?"▲":"▼"}</span></div>{open&&children}</>);
+  return(<div className="no-print sidebar-transition" style={{width:isOpen?248:0,minHeight:"100vh",background:`linear-gradient(180deg,#1E8449 0%,#27AE60 100%)`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:100,overflowX:"hidden",overflowY:isOpen?"auto":"hidden"}}>
+    <div style={{width:248,display:"flex",flexDirection:"column",flex:1}}>
+      <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>LYSBF · CYEP</div></div><button onClick={onToggle} aria-label="Collapse sidebar" style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.12)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"rgba(255,255,255,0.7)",fontSize:13}}>←</button></div></div>
+      <div style={{padding:"14px 10px",flex:1}}>
+        <NI label="Dashboard" icon="🏠" p="dashboard"/>
+        <G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/><NI label="Add" icon="➕" p="ben-add" sub/></G>
+        <G label="SIR" icon="📝" open={sirOpen} setOpen={setSir}><NI label="List" icon="📋" p="sir-list" sub/><NI label="Add" icon="➕" p="sir-add" sub/><NI label="Archive" icon="🗄" p="sir-archive" sub/></G>
+        <NI label="Posts" icon="💬" p="posts"/>
+        <NI label="My Account" icon="👤" p="my-account"/>
+        {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
+      </div>
+      <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
     </div>
-    <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18}}>⇠</span></div></div>
   </div>);
 }
 
-function Dashboard({bens,user,onNavigate}){
+function Dashboard({bens,user,onNavigate,onToggle}){
   const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
   const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
-  return(<div className="fade-in"><Topbar title="Dashboard" sub="View current tasks, activities and reports"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
@@ -220,7 +229,7 @@ function Dashboard({bens,user,onNavigate}){
   </div>);
 }
 
-function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
+function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}){
   const isGender=initialFilter.stat==="Male"||initialFilter.stat==="Female";
   const [search,setSearch]=useState("");
   const [compF,setCompF]=useState("all");
@@ -273,7 +282,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
     XLSX.writeFile(wb,`LYSBF_CYEP_Beneficiaries_${date}.xlsx`);
   }
 
-  return(<div className="fade-in"><Topbar title="Beneficiaries" sub="View and manage all beneficiary profiles"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Beneficiaries" sub="View and manage all beneficiary profiles"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
@@ -323,7 +332,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   </div>);
 }
 
-function BenMgmt({bens,setBens}){
+function BenMgmt({bens,setBens,onToggle}){
   const [confirmBen,setConfirmBen]=useState(null);
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState("");
@@ -354,7 +363,7 @@ function BenMgmt({bens,setBens}){
 
   const sorted=[...bens].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
 
-  return(<div className="fade-in"><Topbar title="Beneficiary Management" sub="Admin only — permanently remove beneficiary records"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Beneficiary Management" sub="Admin only — permanently remove beneficiary records"/>
     <div style={{padding:"24px 32px"}}>
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
       <div style={{fontSize:13,color:T.grey,marginBottom:14}}>{bens.length} {bens.length===1?"beneficiary":"beneficiaries"} on record</div>
@@ -498,7 +507,7 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
 
 const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"🏥"},{k:"education",label:"Education",icon:"📚"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"🫂"},{k:"followups",label:"Follow-Ups",icon:"💬"},{k:"documents",label:"Documents",icon:"📁"}];
 
-function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate}){
+function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle}){
   const [tab,setTab]=useState("basic");
   const [localBen,setLocalBen]=useState(ben);
   useEffect(()=>{setLocalBen(ben);},[ben]);
@@ -508,7 +517,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate}){
     setLocalBen(b=>({...b,photo_url:url}));
     onPhotoUpdate(localBen.id,url);
   }
-  return(<div className="fade-in"><Topbar title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
     <div style={{padding:"24px 32px"}}>
       <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back to List</Btn><Btn variant="navy" onClick={()=>onSIR(localBen)}>📝 Generate SIR</Btn></div>
       <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
@@ -549,11 +558,11 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate}){
   </div>);
 }
 
-function SIRView({ben,users,onBack}){
-  if(!ben)return(<div className="fade-in"><Topbar title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
+function SIRView({ben,users,onBack,onToggle}){
+  if(!ben)return(<div className="fade-in"><Topbar onToggle={onToggle} title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
   const officer=users.find(u=>u.id===ben.assigned_to);
-  return(<div className="fade-in"><Topbar title="Social Inquiry Report" sub={`${ben.name} · ${ben.bid}`}/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Social Inquiry Report" sub={`${ben.name} · ${ben.bid}`}/>
     <div style={{padding:"24px 32px"}}>
       <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back</Btn><Btn variant="navy" onClick={()=>window.print()}>🖨 Print as PDF</Btn></div>
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
@@ -589,14 +598,14 @@ function SIRView({ben,users,onBack}){
   </div>);
 }
 
-function BenForm({user,edit,users,onSave,onCancel}){
+function BenForm({user,edit,users,onSave,onCancel,onToggle}){
   const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"Eastern",district:"",city:"",area:"",physical_desc:"",address:"",community:"New Juaben North",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank);const [busy,setBusy]=useState(false);
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   function handleDob(dob){const age=dob?Math.floor((new Date()-new Date(dob))/(365.25*24*60*60*1000)):null;setF(p=>({...p,dob,age:age&&age>0?String(age):p.age}));}
   const communities=["New Juaben North","Effiduase","Asokore","Oyoko","Kukurantumi","Old Estate","Zongo","Suhum","Akwadum","Dansuagya"];
   const officers=users.filter(u=>u.role!=="Admin").map(u=>({value:u.id,label:u.name}));
-  return(<div className="fade-in"><Topbar title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}><Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
       <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Basic Demographics</SH>
@@ -652,10 +661,10 @@ function BenForm({user,edit,users,onSave,onCancel}){
   </div>);
 }
 
-function PostsPage({bens,user}){
+function PostsPage({bens,user,onToggle}){
   const mine=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
   const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id,photo_url:b.photo_url}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
-  return(<div className="fade-in"><Topbar title="Posts" sub="Your latest follow-up notes and updates"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Posts" sub="Your latest follow-up notes and updates"/>
     <div style={{padding:"24px 32px"}}>
       {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet.</div>}
       {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={{name:p.benName,photo_url:p.photo_url}} size={32} fontSize={11}/><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div></div><div style={{fontSize:12,color:T.grey}}>{p.date}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
@@ -663,7 +672,7 @@ function PostsPage({bens,user}){
   </div>);
 }
 
-function UserMgmt({users,setUsers}){
+function UserMgmt({users,setUsers,onToggle}){
   const [showAdd,setShowAdd]=useState(false);const [editUser,setEditUser]=useState(null);const [changePwUser,setChangePwUser]=useState(null);
   const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer"});
   const [pwForm,setPwForm]=useState({newPw:"",confirmPw:""});const [msg,setMsg]=useState("");
@@ -672,7 +681,7 @@ function UserMgmt({users,setUsers}){
   async function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}await saveAppUser({...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)});setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
   async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
   async function changePassword(){if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}await updateUserPassword(changePwUser.id,pwForm.newPw);setUsers(u=>u.map(x=>x.id===changePwUser.id?{...x,password:pwForm.newPw}:x));setMsg("✅ Password changed!");setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});}
-  return(<div className="fade-in"><Topbar title="User Management" sub="Admin only — manage platform users"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div style={{fontSize:13,color:T.grey}}>{users.length} users</div><Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn></div>
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
@@ -710,7 +719,7 @@ function UserMgmt({users,setUsers}){
   </div>);
 }
 
-function MyAccount({user,users,setUsers}){
+function MyAccount({user,users,setUsers,onToggle}){
   const [pwForm,setPwForm]=useState({current:"",newPw:"",confirm:""});const [msg,setMsg]=useState("");
   async function changeMyPassword(){
     if(!pwForm.current){setMsg("Please enter your current password.");return;}
@@ -723,7 +732,7 @@ function MyAccount({user,users,setUsers}){
     else setMsg("Error saving. Please try again.");
     setPwForm({current:"",newPw:"",confirm:""});
   }
-  return(<div className="fade-in"><Topbar title="My Account" sub="Manage your account settings"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="My Account" sub="Manage your account settings"/>
     <div style={{padding:"24px 32px",maxWidth:600}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
         <SH>Profile</SH>
@@ -746,7 +755,7 @@ function MyAccount({user,users,setUsers}){
   </div>);
 }
 
-function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
+function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
   const fileRef=useRef();
   const [logoMsg,setLogoMsg]=useState("");const [logoBusy,setLogoBusy]=useState(false);
 
@@ -772,7 +781,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
     setLogoBusy(false);
   }
 
-  return(<div className="fade-in"><Topbar title="Settings" sub="App configuration — Admin only"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Settings" sub="App configuration — Admin only"/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
@@ -794,7 +803,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.3.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -820,6 +829,7 @@ export default function App(){
   const [bens,setBens]=useState([]);const [users,setUsers]=useState(DEMO_USERS);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
+  const [sidebarOpen,setSidebarOpen]=useState(true);
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
@@ -889,23 +899,24 @@ export default function App(){
   if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");}} users={users} logoUrl={logoUrl}/>;
 
   function renderPage(){
-    if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)}/>;
-    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)} onPhotoUpdate={handlePhotoUpdate}/>;
-    if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}}/>;
-    if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})}/>;
-    if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter}/>;
-    if(page==="posts")return <PostsPage bens={bens} user={user}/>;
-    if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers}/>;
-    if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers}/>;
-    if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens}/>;
-    if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
-    if(page.startsWith("sir"))return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")}/>;
-    return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})}/>;
+    const tog=()=>setSidebarOpen(o=>!o);
+    if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)} onToggle={tog}/>;
+    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog}/>;
+    if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog}/>;
+    if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
+    if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter} onToggle={tog}/>;
+    if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog}/>;
+    if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
+    if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog}/>;
+    if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog}/>;
+    if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
+    if(page.startsWith("sir"))return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")} onToggle={tog}/>;
+    return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
   }
 
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
-    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl}/>
-    <div className="print-main" style={{marginLeft:248,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
+    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl} isOpen={sidebarOpen} onToggle={()=>setSidebarOpen(o=>!o)}/>
+    <div className="print-main main-transition" style={{marginLeft:sidebarOpen?248:0,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
 }
