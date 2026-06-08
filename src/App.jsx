@@ -150,7 +150,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl}){
       <G label="SIR" icon="📝" open={sirOpen} setOpen={setSir}><NI label="List" icon="📋" p="sir-list" sub/><NI label="Add" icon="➕" p="sir-add" sub/><NI label="Archive" icon="🗄" p="sir-archive" sub/></G>
       <NI label="Posts" icon="💬" p="posts"/>
       <NI label="My Account" icon="👤" p="my-account"/>
-      {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Settings" icon="🔧" p="settings"/></>}
+      {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
     </div>
     <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18}}>⇠</span></div></div>
   </div>);
@@ -242,6 +242,81 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={}}){
   </div>);
 }
 
+function BenMgmt({bens,setBens}){
+  const [confirmBen,setConfirmBen]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState("");
+
+  async function removeBen(ben){
+    setBusy(true);setMsg("");
+    try{
+      const postIds=(ben.posts||[]).map(p=>p.id);
+      if(postIds.length>0){
+        await supabase.from("comments").delete().in("post_id",postIds);
+        await supabase.from("posts").delete().eq("beneficiary_id",ben.id);
+      }
+      if(ben.photo_url){
+        const parts=ben.photo_url.split("/beneficiary-photos/");
+        if(parts.length>1){
+          const filePath=parts[1].split("?")[0];
+          await supabase.storage.from("beneficiary-photos").remove([filePath]);
+        }
+      }
+      const{error}=await supabase.from("beneficiaries").delete().eq("id",ben.id);
+      if(error){setMsg("❌ Error removing beneficiary: "+error.message);setBusy(false);return;}
+      setBens(bs=>bs.filter(b=>b.id!==ben.id));
+      setMsg("✅ "+ben.name+" has been permanently removed.");
+    }catch(e){setMsg("❌ Unexpected error. Please try again.");}
+    setBusy(false);
+    setConfirmBen(null);
+  }
+
+  const sorted=[...bens].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+
+  return(<div className="fade-in"><Topbar title="Beneficiary Management" sub="Admin only — permanently remove beneficiary records"/>
+    <div style={{padding:"24px 32px"}}>
+      {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
+      <div style={{fontSize:13,color:T.grey,marginBottom:14}}>{bens.length} {bens.length===1?"beneficiary":"beneficiaries"} on record</div>
+
+      {confirmBen&&(
+        <div style={{background:"rgba(0,0,0,0.45)",borderRadius:12,padding:"32px 20px",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
+          <div style={{background:"#fff",borderRadius:14,padding:"28px 32px",maxWidth:460,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:T.navy,marginBottom:10}}>Remove beneficiary?</div>
+            <div style={{fontSize:13,color:T.grey,lineHeight:1.65,marginBottom:14}}>You are about to permanently remove <strong style={{color:T.navy}}>{confirmBen.name}</strong> from the system.</div>
+            <div style={{background:"#FDEDEC",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#922B21",marginBottom:20,lineHeight:1.6}}>⚠️ This will also delete all their follow-up notes, comments, and profile photo. This cannot be undone.</div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn variant="danger" onClick={()=>removeBen(confirmBen)} style={{opacity:busy?0.6:1}}>{busy?"Removing...":"Yes, remove permanently"}</Btn>
+              <Btn variant="secondary" onClick={()=>setConfirmBen(null)}>Cancel</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>
+            {["Beneficiary","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {sorted.map((b,i)=>(<tr key={b.id} style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`}}>
+              <td style={{padding:"13px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <BenAvatar ben={b} size={34} fontSize={12}/>
+                  <span style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</span>
+                </div>
+              </td>
+              <td style={{padding:"13px 16px"}}>
+                <button onClick={()=>{setConfirmBen(b);setMsg("");}} style={{padding:"5px 13px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B",fontFamily:"'Source Sans 3',sans-serif"}}>🗑 Remove</button>
+              </td>
+            </tr>))}
+            {sorted.length===0&&<tr><td colSpan={2} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries on record.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>);
+}
+
 function FollowUpsTab({ben,user,onAddPost}){
   const [comments,setComments]=useState({});
   const [newComment,setNewComment]=useState({});
@@ -257,7 +332,7 @@ function FollowUpsTab({ben,user,onAddPost}){
     const text=newComment[postId];if(!text||!text.trim())return;
     setLoading(l=>({...l,[postId]:true}));
     const{data}=await supabase.from("comments").insert([{post_id:postId,author:user.name,author_role:user.role,text,created_at:new Date().toISOString()}]).select().single();
-    if(data){setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));setNewComment(n=>({...n,[postId]:""}))}
+    if(data){setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));setNewComment(n=>({...n,[postId]:""}));}
     setLoading(l=>({...l,[postId]:false}));
   }
   return(<div>
@@ -286,7 +361,6 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
   const [msg,setMsg]=useState("");
   const canEdit=user.role==="Admin"||ben.assigned_to===user.id;
   if(!canEdit)return null;
-
   async function handleFile(e){
     const file=e.target.files[0];
     if(!file)return;
@@ -308,7 +382,6 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
     setUploading(false);
     e.target.value="";
   }
-
   async function removePhoto(){
     if(!window.confirm("Remove this beneficiary's profile photo?"))return;
     setUploading(true);setMsg("");
@@ -320,7 +393,6 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
     }catch(e){setMsg("❌ Unexpected error. Please try again.");}
     setUploading(false);
   }
-
   return(<div style={{marginTop:14}}>
     <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.55)",textTransform:"uppercase",letterSpacing:1.5,marginBottom:8,textAlign:"center"}}>Profile Photo</div>
     {msg&&<div style={{fontSize:11,textAlign:"center",marginBottom:8,padding:"6px 10px",borderRadius:6,background:msg.includes("✅")?"rgba(39,174,96,0.25)":"rgba(192,57,43,0.25)",color:"#fff"}}>{msg}</div>}
@@ -616,7 +688,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.1.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.2.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -707,6 +779,7 @@ export default function App(){
     if(page==="posts")return <PostsPage bens={bens} user={user}/>;
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers}/>;
+    if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers}/>;
     if(page.startsWith("sir"))return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})}/>;
