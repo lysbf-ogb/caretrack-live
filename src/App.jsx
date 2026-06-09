@@ -806,7 +806,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -836,6 +836,7 @@ export default function App(){
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
+    try{const saved=sessionStorage.getItem("ogb_user");if(saved)setUser(JSON.parse(saved));}catch(e){}
   },[]);
 
   useEffect(()=>{
@@ -919,7 +920,7 @@ export default function App(){
     <div style={{color:T.grey,fontSize:14}}>Loading OGB App...</div>
   </div>);
 
-  if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");}} users={users} logoUrl={logoUrl}/>;
+  if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");try{sessionStorage.setItem("ogb_user",JSON.stringify(u));}catch(e){};}} users={users} logoUrl={logoUrl}/>;
 
   function renderPage(){
     const tog=()=>setSidebarOpen(o=>!o);
@@ -938,7 +939,7 @@ export default function App(){
   }
 
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
-    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);}} logoUrl={logoUrl} isOpen={sidebarOpen} onToggle={()=>setSidebarOpen(o=>!o)}/>
+    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}}} logoUrl={logoUrl} isOpen={sidebarOpen} onToggle={()=>setSidebarOpen(o=>!o)}/>
     <div className="print-main main-transition" style={{marginLeft:sidebarOpen?248:0,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
