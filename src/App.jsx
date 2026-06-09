@@ -113,11 +113,14 @@ function Logo({size=40,color="#fff",url=null}){
 }
 
 function Topbar({title,sub,onToggle}){
-  return(<div className="no-print" style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 20px 0 16px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-    <div style={{display:"flex",alignItems:"center",gap:12}}>
-      <button onClick={onToggle} aria-label="Toggle sidebar" style={{width:34,height:34,borderRadius:8,border:`1px solid ${T.greyM}`,background:T.off,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.15s"}}>
-        <span style={{fontSize:16,lineHeight:1}}>☰</span>
-      </button>
+  const NavBtn=({onClick,children,label})=>(<button onClick={onClick} aria-label={label} title={label} style={{width:30,height:30,borderRadius:7,border:`1px solid ${T.greyM}`,background:T.off,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:14,transition:"background 0.15s",color:T.slate}}>{children}</button>);
+  return(<div className="no-print" style={{background:"#fff",borderBottom:`1px solid ${T.greyM}`,padding:"0 20px 0 14px",height:58,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <NavBtn onClick={onToggle} label="Toggle sidebar">☰</NavBtn>
+      <NavBtn onClick={()=>window.history.back()} label="Go back">←</NavBtn>
+      <NavBtn onClick={()=>window.history.forward()} label="Go forward">→</NavBtn>
+      <NavBtn onClick={()=>window.location.reload()} label="Reload page">⟳</NavBtn>
+      <div style={{width:1,height:24,background:T.greyM,margin:"0 4px"}}/>
       <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:700,color:T.navy}}>{title}</div>{sub&&<div style={{fontSize:12,color:T.grey}}>{sub}</div>}</div>
     </div>
     <div style={{fontSize:12,color:T.grey}}>{new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div>
@@ -803,7 +806,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.3.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -865,12 +868,32 @@ export default function App(){
     load();
   },[]);
 
+  const PAGE_PATHS={"dashboard":"/","ben-list":"/beneficiaries","ben-add":"/add","posts":"/posts","my-account":"/account","users":"/users","ben-mgmt":"/ben-mgmt","settings":"/settings","sir-list":"/sir"};
+  const PATH_PAGES={"/":"dashboard","/beneficiaries":"ben-list","/add":"ben-add","/posts":"posts","/account":"my-account","/users":"users","/ben-mgmt":"ben-mgmt","/settings":"settings","/sir":"sir-list"};
+
+  function pushPath(path){if(window.location.pathname!==path)window.history.pushState({path},"",path);}
+
   function nav(p,filter){
     setView(null);setEdit(null);setSir(null);
     if(filter!==undefined)setDashFilter(filter);
     else if(p!=="ben-list")setDashFilter({});
     setPage(p);
+    pushPath(PAGE_PATHS[p]||"/");
   }
+
+  function viewProfile(b){setView(b);setEdit(null);setSir(null);pushPath("/profile");}
+  function viewEdit(b){setEdit(b);setView(null);setSir(null);pushPath("/add");}
+  function viewSIR(b){setSir(b);setView(null);setEdit(null);pushPath("/sir");}
+
+  useEffect(()=>{
+    function handlePop(){
+      const p=PATH_PAGES[window.location.pathname]||"dashboard";
+      setView(null);setEdit(null);setSir(null);setDashFilter({});
+      setPage(p);
+    }
+    window.addEventListener("popstate",handlePop);
+    return()=>window.removeEventListener("popstate",handlePop);
+  },[]);
 
   function handlePhotoUpdate(benId,photoUrl){
     setBens(bs=>bs.map(b=>b.id===benId?{...b,photo_url:photoUrl}:b));
@@ -900,11 +923,11 @@ export default function App(){
 
   function renderPage(){
     const tog=()=>setSidebarOpen(o=>!o);
-    if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>setSir(null)} onToggle={tog}/>;
-    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>setView(null)} onAddPost={b=>setPost(b)} onSIR={b=>setSir(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog}/>;
+    if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>{setSir(null);window.history.back();}} onToggle={tog}/>;
+    if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>{setView(null);window.history.back();}} onAddPost={b=>setPost(b)} onSIR={b=>viewSIR(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog}/>;
     if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog}/>;
     if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
-    if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>setView(b)} onEdit={b=>setEdit(b)} onSIR={b=>setSir(b)} initialFilter={dashFilter} onToggle={tog}/>;
+    if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>viewProfile(b)} onEdit={b=>viewEdit(b)} onSIR={b=>viewSIR(b)} initialFilter={dashFilter} onToggle={tog}/>;
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog}/>;
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog}/>;
