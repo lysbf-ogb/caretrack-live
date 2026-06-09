@@ -806,27 +806,36 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
 }
 
-const VISIT_TYPES=[{key:"Call",icon:"📞"},{key:"Home Visit",icon:"🏠"},{key:"Work Visit",icon:"💼"},{key:"Hospital Visit",icon:"🏥"},{key:"Community Visit",icon:"🤝"},{key:"Other",icon:"📝"}];
+const VISIT_TYPES=[{key:"Call",icon:"📞"},{key:"Home Visit",icon:"🏠"},{key:"School Visit",icon:"🏫"},{key:"Work Visit",icon:"💼"},{key:"Hospital Visit",icon:"🏥"},{key:"Community Visit",icon:"🤝"},{key:"Other",icon:"📝"}];
 
 function PostModal({ben,user,onSave,onClose}){
   const [text,setText]=useState("");
   const [visitDate,setVisitDate]=useState(today());
-  const [visitType,setVisitType]=useState("");
+  const [visitTypes,setVisitTypes]=useState([]);
   const [otherType,setOtherType]=useState("");
   const [busy,setBusy]=useState(false);
-  const finalType=visitType==="Other"?otherType.trim()||"Other":visitType;
+
+  function toggleType(key){
+    setVisitTypes(prev=>prev.includes(key)?prev.filter(k=>k!==key):[...prev,key]);
+  }
+
+  const finalTypes=visitTypes.map(k=>k==="Other"?(otherType.trim()||"Other"):k);
+  const finalType=finalTypes.join(", ");
+  const canSave=text.trim()&&visitTypes.length>0;
+
   async function save(){
-    if(!text.trim()||!visitType){return;}
+    if(!canSave)return;
     setBusy(true);
     await onSave(ben,text,user,visitDate||today(),finalType);
     setBusy(false);
   }
+
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
     <div style={{background:"#fff",borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:560,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:T.navy,marginBottom:4}}>Add Follow-Up Note</div>
@@ -843,18 +852,21 @@ function PostModal({ben,user,onSave,onClose}){
         </div>
       </div>
       <div style={{marginBottom:16}}>
-        <Lbl c="Type of Follow-Up *"/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-          {VISIT_TYPES.map(v=>(<button key={v.key} onClick={()=>setVisitType(v.key)} style={{padding:"10px 8px",borderRadius:8,border:`1.5px solid ${visitType===v.key?"#27AE60":T.greyM}`,cursor:"pointer",textAlign:"center",fontSize:12,fontFamily:"'Source Sans 3',sans-serif",background:visitType===v.key?"#EAFAF1":"#fff",color:visitType===v.key?"#1D6A3A":T.grey,fontWeight:visitType===v.key?700:400,transition:"all 0.15s"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><Lbl c="Type of Follow-Up *"/><span style={{fontSize:11,color:T.grey,marginBottom:5}}>— select all that apply</span></div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+          {VISIT_TYPES.map(v=>{const on=visitTypes.includes(v.key);return(<button key={v.key} onClick={()=>toggleType(v.key)} style={{padding:"10px 6px",borderRadius:8,border:`${on?"1.5px":"0.5px"} solid ${on?"#27AE60":T.greyM}`,cursor:"pointer",textAlign:"center",fontSize:11,fontFamily:"'Source Sans 3',sans-serif",background:on?"#EAFAF1":"#fff",color:on?"#1D6A3A":T.grey,fontWeight:on?700:400,transition:"all 0.15s",position:"relative"}}>
+            {on&&<span style={{position:"absolute",top:4,right:6,fontSize:9,color:"#27AE60",fontWeight:700}}>✓</span>}
             <div style={{fontSize:18,marginBottom:4}}>{v.icon}</div>{v.key}
-          </button>))}
+          </button>);})}
         </div>
-        {visitType==="Other"&&<input value={otherType} onChange={e=>setOtherType(e.target.value)} placeholder="Please specify..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,marginTop:8}}/>}
+        {visitTypes.includes("Other")&&<input value={otherType} onChange={e=>setOtherType(e.target.value)} placeholder="Please specify..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,marginTop:8}}/>}
+        {visitTypes.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>{finalTypes.map((t,i)=><span key={i} style={{background:"#EAFAF1",color:"#1D6A3A",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{VISIT_TYPES.find(v=>v.key===visitTypes[i])?.icon||"📝"} {t}</span>)}</div>}
+        <div style={{fontSize:11,color:T.grey,marginTop:6}}>Tap again to deselect.</div>
       </div>
       <div style={{height:1,background:T.greyM,margin:"16px 0"}}/>
       <Lbl c="Follow-Up Notes *"/>
       <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
-      {(!text.trim()||!visitType)&&<div style={{fontSize:12,color:"#E67E22",marginBottom:12}}>⚠️ Please select a visit type and add a note before saving.</div>}
+      {!canSave&&<div style={{fontSize:12,color:"#E67E22",marginBottom:12}}>⚠️ Please select at least one visit type and add a note before saving.</div>}
       <div style={{display:"flex",gap:10}}>
         <Btn variant="primary" onClick={save} style={{opacity:busy?0.6:1}}>{busy?"Saving...":"Save Follow-Up"}</Btn>
         <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
