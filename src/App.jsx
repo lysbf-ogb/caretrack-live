@@ -434,7 +434,7 @@ function FollowUpsTab({ben,user,onAddPost}){
     {(ben.posts||[]).slice().reverse().map(p=>(<div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
       <div style={{display:"flex",gap:10,marginBottom:12}}>
         <div style={{width:36,height:36,borderRadius:"50%",background:aColor(p.author),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff",flexShrink:0}}>{inits(p.author)}</div>
-        <div style={{flex:1}}><div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.date}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div></div>
+        <div style={{flex:1}}><div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.visit_date||p.date}{p.visit_type&&<span style={{marginLeft:8,background:"#EBF5FB",color:"#1A5276",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{VISIT_TYPES.find(v=>v.key===p.visit_type)?.icon||"📝"} {p.visit_type}</span>}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div></div>
       </div>
       {(comments[p.id]||[]).map(c=>(<div key={c.id} style={{display:"flex",gap:10,marginBottom:10,marginLeft:46,flexDirection:c.author_role==="Admin"?"row-reverse":"row"}}>
         <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Admin"?"#1A252F":"#2980B9",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
@@ -590,7 +590,7 @@ function SIRView({ben,users,onBack,onToggle}){
         </div>))}
         <div style={{marginBottom:24}}>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.navy,borderLeft:"4px solid #27AE60",paddingLeft:12,marginBottom:14}}>6. Follow-Up Notes</div>
-          {(!ben.posts||ben.posts.length===0)?<div style={{color:T.grey,fontSize:13}}>No follow-up notes recorded.</div>:(ben.posts||[]).map((p,i)=>(<div key={i} style={{marginBottom:12,padding:"10px 14px",background:T.off,borderRadius:8,borderLeft:"3px solid #27AE60"}}><div style={{fontSize:11,color:T.grey,marginBottom:4}}>Date: {p.date} | Officer: {p.author}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{p.text}</div></div>))}
+          {(!ben.posts||ben.posts.length===0)?<div style={{color:T.grey,fontSize:13}}>No follow-up notes recorded.</div>:(ben.posts||[]).map((p,i)=>(<div key={i} style={{marginBottom:12,padding:"10px 14px",background:T.off,borderRadius:8,borderLeft:"3px solid #27AE60"}}><div style={{fontSize:11,color:T.grey,marginBottom:4}}>Date: {p.visit_date||p.date} | Officer: {p.author}{p.visit_type&&<span style={{marginLeft:8,fontWeight:700}}>[{p.visit_type}]</span>}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{p.text}</div></div>))}
         </div>
         <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${T.greyM}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
           {["Prepared by (Programme Officer)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
@@ -806,21 +806,57 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
 }
 
+const VISIT_TYPES=[{key:"Call",icon:"📞"},{key:"Home Visit",icon:"🏠"},{key:"Work Visit",icon:"💼"},{key:"Hospital Visit",icon:"🏥"},{key:"Community Visit",icon:"🤝"},{key:"Other",icon:"📝"}];
+
 function PostModal({ben,user,onSave,onClose}){
-  const [text,setText]=useState("");const [busy,setBusy]=useState(false);
+  const [text,setText]=useState("");
+  const [visitDate,setVisitDate]=useState(today());
+  const [visitType,setVisitType]=useState("");
+  const [otherType,setOtherType]=useState("");
+  const [busy,setBusy]=useState(false);
+  const finalType=visitType==="Other"?otherType.trim()||"Other":visitType;
+  async function save(){
+    if(!text.trim()||!visitType){return;}
+    setBusy(true);
+    await onSave(ben,text,user,visitDate||today(),finalType);
+    setBusy(false);
+  }
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
-    <div style={{background:"#fff",borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:560,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}} onClick={e=>e.stopPropagation()}>
-      <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:T.navy,marginBottom:18}}>Add Follow-Up Note — {ben.name}</div>
-      <Lbl c="Note / Observation *"/>
-      <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the follow-up visit, observations, progress, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:130,resize:"vertical",marginBottom:18,marginTop:6}}/>
+    <div style={{background:"#fff",borderRadius:16,padding:"28px 32px",width:"100%",maxWidth:560,boxShadow:"0 20px 60px rgba(0,0,0,0.3)",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:T.navy,marginBottom:4}}>Add Follow-Up Note</div>
+      <div style={{fontSize:12,color:T.grey,marginBottom:20}}>{ben.name}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        <div>
+          <Lbl c="Date of Visit *"/>
+          <input type="date" value={visitDate} onChange={e=>setVisitDate(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+          <div style={{fontSize:11,color:T.grey,marginTop:4}}>Select the actual date of contact</div>
+        </div>
+        <div>
+          <Lbl c="Officer"/>
+          <input type="text" value={user.name} readOnly style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.grey,background:T.off}}/>
+        </div>
+      </div>
+      <div style={{marginBottom:16}}>
+        <Lbl c="Type of Follow-Up *"/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+          {VISIT_TYPES.map(v=>(<button key={v.key} onClick={()=>setVisitType(v.key)} style={{padding:"10px 8px",borderRadius:8,border:`1.5px solid ${visitType===v.key?"#27AE60":T.greyM}`,cursor:"pointer",textAlign:"center",fontSize:12,fontFamily:"'Source Sans 3',sans-serif",background:visitType===v.key?"#EAFAF1":"#fff",color:visitType===v.key?"#1D6A3A":T.grey,fontWeight:visitType===v.key?700:400,transition:"all 0.15s"}}>
+            <div style={{fontSize:18,marginBottom:4}}>{v.icon}</div>{v.key}
+          </button>))}
+        </div>
+        {visitType==="Other"&&<input value={otherType} onChange={e=>setOtherType(e.target.value)} placeholder="Please specify..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,marginTop:8}}/>}
+      </div>
+      <div style={{height:1,background:T.greyM,margin:"16px 0"}}/>
+      <Lbl c="Follow-Up Notes *"/>
+      <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
+      {(!text.trim()||!visitType)&&<div style={{fontSize:12,color:"#E67E22",marginBottom:12}}>⚠️ Please select a visit type and add a note before saving.</div>}
       <div style={{display:"flex",gap:10}}>
-        <Btn variant="primary" onClick={async()=>{if(!text.trim())return;setBusy(true);await onSave(ben,text,user);setBusy(false);}}>{busy?"Saving...":"Save Note"}</Btn>
+        <Btn variant="primary" onClick={save} style={{opacity:busy?0.6:1}}>{busy?"Saving...":"Save Follow-Up"}</Btn>
         <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
       </div>
     </div>
@@ -910,8 +946,8 @@ export default function App(){
     setEdit(null);nav("ben-list");
   }
 
-  async function addPost(ben,text,author){
-    try{const{data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:today()}]).select().single();if(data){setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));}}catch(e){console.log("Post error:",e);}
+  async function addPost(ben,text,author,visitDate,visitType){
+    try{const{data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:visitDate||today(),visit_date:visitDate||today(),visit_type:visitType||""}]).select().single();if(data){setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));}}catch(e){console.log("Post error:",e);}
     setPost(null);
   }
 
