@@ -238,8 +238,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
   const [compF,setCompF]=useState("all");
   const [statF,setStatF]=useState("all");
   const [gendF,setGendF]=useState("all");
-  const [commF,setCommF]=useState("all");
-  const [overdueF,setOverdueF]=useState(false);
+  const [commF,setCommF]=useState("all");  const [overdueF,setOverdueF]=useState(false);
   const [yearF,setYearF]=useState("all");
   const [quarterF,setQuarterF]=useState("all");
   const [sort,setSort]=useState("name-asc");
@@ -250,11 +249,11 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
     setOverdueF(initialFilter.overdue===true);
     setSearch("");
   },[initialFilter.comp,initialFilter.stat,initialFilter.overdue]);
-  const communities=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
+  const regions=[...new Set(bens.map(b=>b.region).filter(Boolean))].sort();
   const enrollYears=[...new Set(bens.map(b=>b.enroll_date?b.enroll_date.slice(0,4):null).filter(Boolean))].sort();
   function getQuarter(dateStr){if(!dateStr)return null;const m=new Date(dateStr).getMonth()+1;if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4";}
   const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
-    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.community===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF))
+    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.region===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
@@ -295,7 +294,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
           <div style={{flex:"1 1 180px"}}><Lbl c="Search"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Name or ID..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/></div>
           <div style={{flex:"1 1 150px"}}><Lbl c="Component"/><select value={compF} onChange={e=>setCompF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Components</option>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
-          <div style={{flex:"1 1 130px"}}><Lbl c="Community"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option>{communities.map(c=><option key={c}>{c}</option>)}</select></div>
+          <div style={{flex:"1 1 130px"}}><Lbl c="Region"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Regions</option>{regions.map(r=><option key={r}>{r}</option>)}</select></div>
           <div style={{flex:"1 1 110px"}}><Lbl c="Status"/><select value={statF} onChange={e=>setStatF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option><option>Active</option><option>Completed</option><option>On Hold</option></select></div>
           <div style={{width:1,height:36,background:T.greyM,alignSelf:"flex-end",marginBottom:1}}/>
           <div style={{flex:"1 1 110px"}}><Lbl c="Enrol Year"/><select value={yearF} onChange={e=>setYearF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Years</option>{enrollYears.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
@@ -601,12 +600,36 @@ function SIRView({ben,users,onBack,onToggle}){
   </div>);
 }
 
-function BenForm({user,edit,users,onSave,onCancel,onToggle}){
-  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"Eastern",district:"",city:"",area:"",physical_desc:"",address:"",community:"New Juaben North",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
+const GHANA_REGIONS=["Ahafo","Ashanti","Bono","Bono East","Central","Eastern","Greater Accra","North East","Northern","Oti","Savannah","Upper East","Upper West","Volta","Western","Western North"];
+
+function AutoInput({label,value,onChange,suggestions,placeholder,full}){
+  const [show,setShow]=useState(false);
+  const [filtered,setFiltered]=useState([]);
+  const ref=useRef();
+  function handleChange(v){
+    onChange(v);
+    if(v.trim().length>0){
+      const f=suggestions.filter(s=>s.toLowerCase().includes(v.toLowerCase())&&s.toLowerCase()!==v.toLowerCase());
+      setFiltered(f.slice(0,6));
+      setShow(f.length>0);
+    }else{setShow(false);}
+  }
+  function pick(v){onChange(v);setShow(false);}
+  useEffect(()=>{function handleClick(e){if(ref.current&&!ref.current.contains(e.target))setShow(false);}document.addEventListener("mousedown",handleClick);return()=>document.removeEventListener("mousedown",handleClick);},[]);
+  return(<div ref={ref} style={{display:"flex",flexDirection:"column",gap:5,position:"relative",...(full?{gridColumn:"1/-1"}:{})}}>
+    <Lbl c={label}/>
+    <input value={value||""} onChange={e=>handleChange(e.target.value)} onFocus={()=>{if(value&&value.trim().length>0){const f=suggestions.filter(s=>s.toLowerCase().includes(value.toLowerCase())&&s.toLowerCase()!==value.toLowerCase());if(f.length>0){setFiltered(f.slice(0,6));setShow(true);}}}} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:"#fff",color:T.navy}}/>
+    {show&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:`1px solid ${T.greyM}`,borderRadius:8,zIndex:200,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",marginTop:2,overflow:"hidden"}}>
+      {filtered.map((s,i)=>(<div key={i} onMouseDown={()=>pick(s)} style={{padding:"8px 14px",fontSize:13,color:T.navy,cursor:"pointer",borderBottom:i<filtered.length-1?`1px solid ${T.greyL}`:"none"}} onMouseEnter={e=>e.currentTarget.style.background=T.off} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>{s}</div>))}
+    </div>}
+  </div>);
+}
+
+function BenForm({user,edit,users,onSave,onCancel,onToggle,communitySuggestions,districtSuggestions,citySuggestions}){
+  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"",district:"",city:"",area:"",physical_desc:"",address:"",community:"",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank);const [busy,setBusy]=useState(false);
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   function handleDob(dob){const age=dob?Math.floor((new Date()-new Date(dob))/(365.25*24*60*60*1000)):null;setF(p=>({...p,dob,age:age&&age>0?String(age):p.age}));}
-  const communities=["New Juaben North","Effiduase","Asokore","Oyoko","Kukurantumi","Old Estate","Zongo","Suhum","Akwadum","Dansuagya"];
   const officers=users.filter(u=>u.role!=="Admin").map(u=>({value:u.id,label:u.name}));
   return(<div className="fade-in"><Topbar onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}><Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
@@ -621,10 +644,10 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle}){
           <FI label="Nationality" value={f.nationality} onChange={v=>s("nationality",v)}/>
           <FI label="Tribe / Ethnicity" value={f.tribe} onChange={v=>s("tribe",v)}/>
           <FI label="Religion" value={f.religion} onChange={v=>s("religion",v)} options={["Christian","Muslim","Traditional","Other"]}/>
-          <FI label="Region" value={f.region} onChange={v=>s("region",v)}/>
-          <FI label="District" value={f.district} onChange={v=>s("district",v)}/>
-          <FI label="City / Village" value={f.city} onChange={v=>s("city",v)}/>
-          <FI label="Community" value={f.community} onChange={v=>s("community",v)} options={communities}/>
+          <FI label="Region" value={f.region} onChange={v=>s("region",v)} options={["",...GHANA_REGIONS]}/>
+          <AutoInput label="District" value={f.district} onChange={v=>s("district",v)} suggestions={districtSuggestions} placeholder="e.g. New Juaben North"/>
+          <AutoInput label="City / Village" value={f.city} onChange={v=>s("city",v)} suggestions={citySuggestions} placeholder="e.g. Koforidua"/>
+          <AutoInput label="Community" value={f.community} onChange={v=>s("community",v)} suggestions={communitySuggestions} placeholder="e.g. Effiduase"/>
           <FI label="Full Address" value={f.address} onChange={v=>s("address",v)} full/>
         </div>
         <SH>Programme Details</SH>
@@ -806,7 +829,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -974,7 +997,10 @@ export default function App(){
     const tog=()=>setSidebarOpen(o=>!o);
     if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>{setSir(null);window.history.back();}} onToggle={tog}/>;
     if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>{setView(null);window.history.back();}} onAddPost={b=>setPost(b)} onSIR={b=>viewSIR(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog}/>;
-    if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog}/>;
+    const communitySuggestions=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
+    const districtSuggestions=[...new Set(bens.map(b=>b.district).filter(Boolean))].sort();
+    const citySuggestions=[...new Set(bens.map(b=>b.city).filter(Boolean))].sort();
+    if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog} communitySuggestions={communitySuggestions} districtSuggestions={districtSuggestions} citySuggestions={citySuggestions}/>;
     if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
     if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>viewProfile(b)} onEdit={b=>viewEdit(b)} onSIR={b=>viewSIR(b)} initialFilter={dashFilter} onToggle={tog}/>;
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog}/>;
