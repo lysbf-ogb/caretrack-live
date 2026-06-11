@@ -33,17 +33,26 @@ async function saveAppUser(user){
     if(user.auth_id){
       const{error}=await supabase.from("app_users").upsert({...user},{onConflict:"id"});return!error;
     }
-    let authUserId=null;
-    const{data:authData,error:authError}=await supabase.auth.signUp({email:user.email.toLowerCase(),password:user.password,options:{emailRedirectTo:null}});
-    if(authError){
-      if(authError.message==="User already registered"){
-        console.log("Auth signup error:",authError.message);return false;
-      }
-      console.log("Auth signup error:",authError.message);return false;
+    // For new users created by Admin: save profile with password
+    // Use a separate supabase client so it doesn't affect the admin's session
+    const tempClient=createClient(
+      "https://hdcsjkptswmsjgcsqzki.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3Nqa3B0c3dtc2pnY3NxemtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQyNzEsImV4cCI6MjA5NjAwMDI3MX0.V5Axs0KeuKVvM83qxrcItG8MJIQYw5TL9yOkF-2DpUI",
+      {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
+    );
+    const{data:authData,error:authError}=await tempClient.auth.signUp({
+      email:user.email.toLowerCase(),
+      password:user.password,
+    });
+    if(authError){console.log("Auth signup error:",authError.message);return false;}
+    if(!authData.user){console.log("No auth user returned");return false;}
+    if(authData.user.identities&&authData.user.identities.length===0){
+      console.log("Email already exists in Auth");return false;
     }
-    if(!authData.user){console.log("No user returned from signUp");return false;}
-    authUserId=authData.user.id;
-    const{error:profileError}=await supabase.from("app_users").insert({id:user.id,name:user.name,email:user.email.toLowerCase(),role:user.role,avatar:user.avatar,auth_id:authUserId});
+    const{error:profileError}=await supabase.from("app_users").insert({
+      id:user.id,name:user.name,email:user.email.toLowerCase(),
+      role:user.role,avatar:user.avatar,auth_id:authData.user.id
+    });
     if(profileError){console.log("Profile insert error:",profileError.message);return false;}
     return true;
   }catch(e){console.log("saveAppUser exception:",e);return false;}
@@ -861,7 +870,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
