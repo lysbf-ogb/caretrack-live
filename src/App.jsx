@@ -9,26 +9,37 @@ const supabase = createClient(
 
 if(!window.XLSX){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";document.head.appendChild(s);}
 
-const DEMO_USERS = [
-  { id:"admin-1",   email:"admin@ogb.org",  password:"admin123", name:"Mark Effah Yeboah", role:"Admin",            avatar:"MY" },
-  { id:"officer-1", email:"kofi@ogb.org",   password:"pass123",  name:"Kofi Mensah",       role:"Programme Officer", avatar:"KM" },
-  { id:"officer-2", email:"abena@ogb.org",  password:"pass123",  name:"Abena Owusu",       role:"Programme Officer", avatar:"AO" },
-];
-
 async function loadAppUsers(){
   try{const{data,error}=await supabase.from("app_users").select("*").order("name");if(!error&&data&&data.length>0)return data;}catch(e){}
-  return DEMO_USERS;
+  return [];
 }
+
 async function loginUser(email,password){
-  try{const{data,error}=await supabase.from("app_users").select("*").eq("email",email.toLowerCase()).eq("password",password).single();if(!error&&data)return data;}catch(e){}
-  return null;
+  try{
+    const{data:authData,error:authError}=await supabase.auth.signInWithPassword({email:email.toLowerCase(),password});
+    if(authError||!authData.user)return null;
+    const{data:profile,error:profileError}=await supabase.from("app_users").select("*").eq("auth_id",authData.user.id).single();
+    if(profileError||!profile)return null;
+    return{...profile,email:email.toLowerCase()};
+  }catch(e){return null;}
 }
+
 async function updateUserPassword(userId,newPassword){
-  try{const{error}=await supabase.from("app_users").update({password:newPassword}).eq("id",userId);return!error;}catch(e){return false;}
+  try{const{error}=await supabase.auth.updateUser({password:newPassword});return!error;}catch(e){return false;}
 }
+
 async function saveAppUser(user){
-  try{const{error}=await supabase.from("app_users").upsert({...user});return!error;}catch(e){return false;}
+  try{
+    if(user.auth_id){
+      const{error}=await supabase.from("app_users").upsert({...user});return!error;
+    }
+    const{data:authData,error:authError}=await supabase.auth.signUp({email:user.email.toLowerCase(),password:user.password,options:{emailRedirectTo:null}});
+    if(authError||!authData.user)return false;
+    const{error:profileError}=await supabase.from("app_users").insert({id:user.id,name:user.name,email:user.email.toLowerCase(),role:user.role,avatar:user.avatar,auth_id:authData.user.id});
+    return!profileError;
+  }catch(e){return false;}
 }
+
 async function deleteAppUser(userId){
   try{const{error}=await supabase.from("app_users").delete().eq("id",userId);return!error;}catch(e){return false;}
 }
@@ -706,7 +717,7 @@ function UserMgmt({users,setUsers,onToggle}){
   async function addUser(){if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}if(users.find(u=>u.email===form.email)){setMsg("Email already exists.");return;}const nu={id:`officer-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name)};await saveAppUser(nu);setUsers(u=>[...u,nu]);setMsg("✅ User created!");setForm({name:"",email:"",password:"",role:"Programme Officer"});setShowAdd(false);}
   async function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}await saveAppUser({...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)});setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
   async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
-  async function changePassword(){if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}await updateUserPassword(changePwUser.id,pwForm.newPw);setUsers(u=>u.map(x=>x.id===changePwUser.id?{...x,password:pwForm.newPw}:x));setMsg("✅ Password changed!");setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});}
+  async function changePassword(){if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}const ok=await updateUserPassword(changePwUser.id,pwForm.newPw);if(ok){setMsg("✅ Password changed!");}else{setMsg("Error changing password. Please try again.");}setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});}
   return(<div className="fade-in"><Topbar onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div style={{fontSize:13,color:T.grey}}>{users.length} users</div><Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn></div>
@@ -754,7 +765,7 @@ function MyAccount({user,users,setUsers,onToggle}){
     const verified=await loginUser(user.email,pwForm.current);
     if(!verified){setMsg("Current password is incorrect.");return;}
     const ok=await updateUserPassword(user.id,pwForm.newPw);
-    if(ok){setUsers(u=>u.map(x=>x.id===user.id?{...x,password:pwForm.newPw}:x));setMsg("✅ Password changed successfully!");}
+    if(ok){setMsg("✅ Password changed successfully!");}
     else setMsg("Error saving. Please try again.");
     setPwForm({current:"",newPw:"",confirm:""});
   }
@@ -829,7 +840,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1013,7 +1024,7 @@ export default function App(){
   }
 
   return(<div style={{fontFamily:"'Source Sans 3',sans-serif",minHeight:"100vh",background:T.off,display:"flex"}}>
-    <Sidebar user={user} page={page} setPage={nav} onLogout={()=>{setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}}} logoUrl={logoUrl} isOpen={sidebarOpen} onToggle={()=>setSidebarOpen(o=>!o)}/>
+    <Sidebar user={user} page={page} setPage={nav} onLogout={async()=>{await supabase.auth.signOut();setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}}} logoUrl={logoUrl} isOpen={sidebarOpen} onToggle={()=>setSidebarOpen(o=>!o)}/>
     <div className="print-main main-transition" style={{marginLeft:sidebarOpen?248:0,flex:1,minHeight:"100vh"}}>{renderPage()}</div>
     {postModal&&<PostModal ben={postModal} user={user} onSave={addPost} onClose={()=>setPost(null)}/>}
   </div>);
