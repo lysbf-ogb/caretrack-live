@@ -911,7 +911,7 @@ function PostModal({ben,user,onSave,onClose}){
 
 export default function App(){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);const [page,setPage]=useState("dashboard");
-  const [bens,setBens]=useState([]);const [users,setUsers]=useState(DEMO_USERS);
+  const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
   const [sidebarOpen,setSidebarOpen]=useState(true);
