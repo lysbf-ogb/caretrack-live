@@ -33,14 +33,10 @@ async function saveAppUser(user){
     if(user.auth_id){
       const{error}=await supabase.from("app_users").upsert({...user},{onConflict:"id"});return!error;
     }
-    // For new users created by Admin: save profile with password
-    // Use a separate supabase client so it doesn't affect the admin's session
-    const tempClient=createClient(
-      "https://hdcsjkptswmsjgcsqzki.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3Nqa3B0c3dtc2pnY3NxemtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQyNzEsImV4cCI6MjA5NjAwMDI3MX0.V5Axs0KeuKVvM83qxrcItG8MJIQYw5TL9yOkF-2DpUI",
-      {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}
-    );
-    const{data:authData,error:authError}=await tempClient.auth.signUp({
+    // Save current admin session before creating new user
+    const{data:{session:adminSession}}=await supabase.auth.getSession();
+    // Sign up new user
+    const{data:authData,error:authError}=await supabase.auth.signUp({
       email:user.email.toLowerCase(),
       password:user.password,
     });
@@ -49,9 +45,13 @@ async function saveAppUser(user){
     if(authData.user.identities&&authData.user.identities.length===0){
       console.log("Email already exists in Auth");return false;
     }
+    const authUserId=authData.user.id;
+    // Restore admin session immediately
+    if(adminSession){await supabase.auth.setSession({access_token:adminSession.access_token,refresh_token:adminSession.refresh_token});}
+    // Save profile to app_users
     const{error:profileError}=await supabase.from("app_users").insert({
       id:user.id,name:user.name,email:user.email.toLowerCase(),
-      role:user.role,avatar:user.avatar,auth_id:authData.user.id
+      role:user.role,avatar:user.avatar,auth_id:authUserId
     });
     if(profileError){console.log("Profile insert error:",profileError.message);return false;}
     return true;
@@ -870,7 +870,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
