@@ -31,12 +31,19 @@ async function updateUserPassword(userId,newPassword){
 async function saveAppUser(user){
   try{
     if(user.auth_id){
-      const{error}=await supabase.from("app_users").upsert({...user});return!error;
+      const{error}=await supabase.from("app_users").upsert({...user},{onConflict:"id"});return!error;
     }
+    let authUserId=null;
     const{data:authData,error:authError}=await supabase.auth.signUp({email:user.email.toLowerCase(),password:user.password,options:{emailRedirectTo:null}});
-    if(authError){console.log("Auth signup error:",authError.message);return false;}
+    if(authError){
+      if(authError.message==="User already registered"){
+        console.log("Auth signup error:",authError.message);return false;
+      }
+      console.log("Auth signup error:",authError.message);return false;
+    }
     if(!authData.user){console.log("No user returned from signUp");return false;}
-    const{error:profileError}=await supabase.from("app_users").insert({id:user.id,name:user.name,email:user.email.toLowerCase(),role:user.role,avatar:user.avatar,auth_id:authData.user.id});
+    authUserId=authData.user.id;
+    const{error:profileError}=await supabase.from("app_users").insert({id:user.id,name:user.name,email:user.email.toLowerCase(),role:user.role,avatar:user.avatar,auth_id:authUserId});
     if(profileError){console.log("Profile insert error:",profileError.message);return false;}
     return true;
   }catch(e){console.log("saveAppUser exception:",e);return false;}
@@ -722,7 +729,7 @@ function UserMgmt({users,setUsers,onToggle}){
     if(form.password.length<6){setMsg("Password must be at least 6 characters.");return;}
     const nu={id:`officer-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name)};
     const ok=await saveAppUser(nu);
-    if(!ok){setMsg("❌ Error creating user. Please check the email is valid and try again.");return;}
+    if(!ok){setMsg("❌ Error creating user. This email may already be registered. Please use a different email.");return;}
     const{data:newProfile}=await supabase.from("app_users").select("*").eq("email",form.email.toLowerCase()).single();
     setUsers(u=>[...u,newProfile||nu]);
     setMsg("✅ User created! They can now log in with the password you set.");
@@ -854,7 +861,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.4.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.4.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
