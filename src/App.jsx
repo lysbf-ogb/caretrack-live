@@ -899,7 +899,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1005,14 +1005,13 @@ export default function App(){
         if(error||!data)return;
         const map={};data.forEach(r=>{if(r.key)map[r.key]=r.value;});
         if(map["logo_url"]&&map["logo_url"].length>0){
-          // Generate a signed URL for the logo path
           const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(map["logo_url"],SIGNED_URL_TTL);
           if(signData?.signedUrl)setLogoUrl(signData.signedUrl);
         }
       }catch(e){console.log("Settings load error:",e);}
     }
-    loadSettings();
-  },[]);
+    if(user)loadSettings();
+  },[user]);
 
   useEffect(()=>{
     if(!user){setBens([]);return;}
