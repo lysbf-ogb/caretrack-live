@@ -201,6 +201,32 @@ function Login({onLogin,users,logoUrl}){
   </div>);
 }
 
+// Shown when a user arrives via a password-reset email link.
+function ResetPassword({logoUrl,onDone}){
+  const [pw,setPw]=useState("");const [pw2,setPw2]=useState("");const [msg,setMsg]=useState("");const [busy,setBusy]=useState(false);
+  async function save(){
+    if(pw.length<6){setMsg("Password must be at least 6 characters.");return;}
+    if(pw!==pw2){setMsg("Passwords do not match.");return;}
+    setBusy(true);setMsg("");
+    const{error}=await supabase.auth.updateUser({password:pw});
+    if(error){setMsg("Error: "+error.message);setBusy(false);return;}
+    await supabase.auth.signOut();
+    onDone();
+  }
+  return(<div style={{minHeight:"100vh",background:`linear-gradient(160deg,#1A252F 0%,#27AE60 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+    <div style={{background:"#fff",borderRadius:20,padding:"44px 40px",width:400,boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
+      <div style={{textAlign:"center",marginBottom:28}}><Logo size={56} color="#27AE60" url={logoUrl}/><div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy,marginTop:10}}>Choose a New Password</div><div style={{fontSize:12,color:T.grey,marginTop:4}}>You will sign in with this password from now on</div></div>
+      {msg&&<div style={{background:T.redL,color:T.red,borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:14,textAlign:"center"}}>{msg}</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <input placeholder="New password" value={pw} onChange={e=>setPw(e.target.value)} type="password" style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
+        <input placeholder="Confirm new password" value={pw2} onChange={e=>setPw2(e.target.value)} type="password" onKeyDown={e=>e.key==="Enter"&&save()} style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
+        <button onClick={save} disabled={busy} style={{background:busy?"#95a5a6":"#27AE60",color:"#fff",border:"none",borderRadius:10,padding:"13px",fontSize:15,fontWeight:700,fontFamily:"'Source Sans 3',sans-serif",cursor:busy?"not-allowed":"pointer"}}>{busy?"Saving...":"Save Password →"}</button>
+      </div>
+      <div style={{marginTop:20,padding:"12px 14px",background:T.off,borderRadius:8,fontSize:11,color:T.grey,textAlign:"center"}}>After saving, sign in with your email and new password</div>
+    </div>
+  </div>);
+}
+
 function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
   const [benOpen,setBen]=useState(true);const [sirOpen,setSir]=useState(false);
   const NI=({label,icon,p,sub})=>(<div className={sub?"nav-sub":"nav-item"} onClick={()=>setPage(p)} style={{display:"flex",alignItems:"center",gap:9,padding:sub?"7px 12px 7px 40px":"10px 14px",borderRadius:8,cursor:"pointer",marginBottom:2,color:page===p?"#fff":"rgba(255,255,255,0.78)",fontWeight:page===p?700:400,fontSize:sub?12:13,background:page===p?"rgba(255,255,255,0.20)":"transparent",transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif",whiteSpace:"nowrap"}}><span style={{fontSize:sub?14:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></div>);
@@ -775,7 +801,7 @@ function UserMgmt({users,setUsers,onToggle}){
   async function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}await saveAppUser({...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)});setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
   async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
   async function sendResetEmail(u){
-    const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin+"/reset"});
+    const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin});
     if(error){setMsg("❌ Could not send reset email: "+error.message);}
     else{setMsg("✅ Password reset email sent to "+u.email+". They can follow the link to set a new password.");}
     setChangePwUser(null);
@@ -904,7 +930,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -978,10 +1004,15 @@ export default function App(){
   const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);
   const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
-  const [sidebarOpen,setSidebarOpen]=useState(true);
+  const [sidebarOpen,setSidebarOpen]=useState(true);const [recovery,setRecovery]=useState(false);
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
+    // When a user opens a password-reset email link, Supabase signs them in
+    // from the link and fires this event. We then show the ResetPassword
+    // screen so they can choose their new password.
+    const{data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{if(event==="PASSWORD_RECOVERY")setRecovery(true);});
+    return()=>{subscription.unsubscribe();};
   },[]);
 
   useEffect(()=>{
@@ -1087,6 +1118,8 @@ export default function App(){
     <div className="spin" style={{width:44,height:44,border:`4px solid ${T.greyM}`,borderTopColor:"#27AE60",borderRadius:"50%"}}/>
     <div style={{color:T.grey,fontSize:14}}>Loading OGB App...</div>
   </div>);
+
+  if(recovery)return <ResetPassword logoUrl={logoUrl} onDone={()=>{setRecovery(false);setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}window.history.replaceState({},"","/");}}/>;
 
   if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");try{sessionStorage.setItem("ogb_user",JSON.stringify(u));}catch(e){};}} users={users} logoUrl={logoUrl}/>;
 
