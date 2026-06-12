@@ -4,10 +4,32 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   "https://hdcsjkptswmsjgcsqzki.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3Nqa3B0c3dtc2pnY3NxemtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQyNzEsImV4cCI6MjA5NjAwMDI3MX0.V5Axs0KeuKVvM83qxrcItG8MJIQYw5TL9yOkF-2DpUI"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkY3Nqa3B0c3dtc2pnY3NxemtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjQyNzEsImV4cCI6MjA5NjAwMDI3MX0.V5Axs0KeuKVvM83qxrcItG8MJIQYw5TL9yOkF-2DpUI",
+  {auth:{storage:window.sessionStorage}}
 );
 
+const PHOTO_BUCKET="beneficiary-photos";
+const SIGNED_URL_TTL=60*60*8;
+
 if(!window.XLSX){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";document.head.appendChild(s);}
+
+function photoPathFrom(stored){
+  if(!stored)return null;
+  if(stored.includes("/beneficiary-photos/"))return stored.split("/beneficiary-photos/")[1].split("?")[0];
+  return stored;
+}
+
+async function signPhotoUrls(bens){
+  const paths=[...new Set(bens.map(b=>photoPathFrom(b.photo_url)).filter(Boolean))];
+  let map={};
+  if(paths.length>0){
+    try{
+      const{data,error}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths,SIGNED_URL_TTL);
+      if(!error&&data)data.forEach(d=>{if(d.signedUrl&&d.path)map[d.path]=d.signedUrl;});
+    }catch(e){console.log("Photo sign error:",e);}
+  }
+  return bens.map(b=>{const p=photoPathFrom(b.photo_url);return{...b,photo_path:p,photo_url:p?(map[p]||null):null};});
+}
 
 async function loadAppUsers(){
   try{const{data,error}=await supabase.from("app_users").select("*").order("name");if(!error&&data&&data.length>0)return data;}catch(e){}
@@ -491,14 +513,16 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
     try{
       const ext=file.name.split(".").pop();
       const path=`${ben.id}.${ext}`;
-      const{error:upErr}=await supabase.storage.from("beneficiary-photos").upload(path,file,{upsert:true,contentType:file.type});
+      const{error:upErr}=await supabase.storage.from(PHOTO_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
       if(upErr){setMsg("❌ Upload failed: "+upErr.message);setUploading(false);return;}
-      const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
-      const photoUrl=urlData.publicUrl+"?t="+Date.now();
-      const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:photoUrl}).eq("id",ben.id);
-      if(dbErr){setMsg("❌ Could not save photo URL: "+dbErr.message);setUploading(false);return;}
+      // Store the bare path — signed URLs are generated on load
+      const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:path}).eq("id",ben.id);
+      if(dbErr){setMsg("❌ Could not save photo: "+dbErr.message);setUploading(false);return;}
+      // Generate a signed URL for immediate display
+      const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path,SIGNED_URL_TTL);
+      const signedUrl=signData?.signedUrl||null;
       setMsg("✅ Photo uploaded successfully!");
-      onPhotoUpdate(photoUrl);
+      onPhotoUpdate(signedUrl,path);
     }catch(e){setMsg("❌ Unexpected error. Please try again.");}
     setUploading(false);
     e.target.value="";
@@ -507,10 +531,13 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
     if(!window.confirm("Remove this beneficiary's profile photo?"))return;
     setUploading(true);setMsg("");
     try{
+      if(ben.photo_path){
+        await supabase.storage.from(PHOTO_BUCKET).remove([ben.photo_path]);
+      }
       const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:null}).eq("id",ben.id);
       if(dbErr){setMsg("❌ Could not remove photo.");setUploading(false);return;}
       setMsg("✅ Photo removed.");
-      onPhotoUpdate(null);
+      onPhotoUpdate(null,null);
     }catch(e){setMsg("❌ Unexpected error. Please try again.");}
     setUploading(false);
   }
@@ -544,9 +571,9 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle})
   useEffect(()=>{setLocalBen(ben);},[ben]);
   const comp=COMPONENTS.find(c=>c.id===localBen.component_id);
   const officer=users.find(u=>u.id===localBen.assigned_to);
-  function handlePhotoUpdate(url){
-    setLocalBen(b=>({...b,photo_url:url}));
-    onPhotoUpdate(localBen.id,url);
+  function handlePhotoUpdate(url,path){
+    setLocalBen(b=>({...b,photo_url:url,photo_path:path}));
+    onPhotoUpdate(localBen.id,url,path);
   }
   return(<div className="fade-in"><Topbar onToggle={onToggle} title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
     <div style={{padding:"24px 32px"}}>
@@ -870,7 +897,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -948,7 +975,21 @@ export default function App(){
 
   useEffect(()=>{
     if(!document.getElementById("ogb-css")){const el=document.createElement("style");el.id="ogb-css";el.textContent=CSS;document.head.appendChild(el);}
-    try{const saved=sessionStorage.getItem("ogb_user");if(saved)setUser(JSON.parse(saved));}catch(e){}
+  },[]);
+
+  useEffect(()=>{
+    async function restore(){
+      try{
+        const saved=sessionStorage.getItem("ogb_user");
+        if(saved){
+          const{data:{session}}=await supabase.auth.getSession();
+          if(session)setUser(JSON.parse(saved));
+          else{try{sessionStorage.removeItem("ogb_user");}catch(e){}}
+        }
+      }catch(e){}
+      setLoading(false);
+    }
+    restore();
   },[]);
 
   useEffect(()=>{
@@ -968,18 +1009,22 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
+    if(!user){setBens([]);return;}
+    let cancelled=false;
     async function load(){
       try{
         const{data:benData,error}=await supabase.from("beneficiaries").select("*").order("name");
         if(error){console.log("Load error:",error);setLoading(false);return;}
         const{data:postData}=await supabase.from("posts").select("*").order("created_at");
-        const bensWithPosts=(benData||[]).map(b=>({...b,posts:(postData||[]).filter(p=>p.beneficiary_id===b.id)}));
-        setBens(bensWithPosts);
+        let bensWithPosts=(benData||[]).map(b=>({...b,posts:(postData||[]).filter(p=>p.beneficiary_id===b.id)}));
+        bensWithPosts=await signPhotoUrls(bensWithPosts);
+        if(!cancelled)setBens(bensWithPosts);
       }catch(e){console.log("Load error:",e);}
-      setLoading(false);
+      if(!cancelled)setLoading(false);
     }
     load();
-  },[]);
+    return()=>{cancelled=true;};
+  },[user]);
 
   const PAGE_PATHS={"dashboard":"/","ben-list":"/beneficiaries","ben-add":"/add","posts":"/posts","my-account":"/account","users":"/users","ben-mgmt":"/ben-mgmt","settings":"/settings","sir-list":"/sir"};
   const PATH_PAGES={"/":"dashboard","/beneficiaries":"ben-list","/add":"ben-add","/posts":"posts","/account":"my-account","/users":"users","/ben-mgmt":"ben-mgmt","/settings":"settings","/sir":"sir-list"};
@@ -1008,9 +1053,9 @@ export default function App(){
     return()=>window.removeEventListener("popstate",handlePop);
   },[]);
 
-  function handlePhotoUpdate(benId,photoUrl){
-    setBens(bs=>bs.map(b=>b.id===benId?{...b,photo_url:photoUrl}:b));
-    if(viewBen&&viewBen.id===benId)setView(v=>({...v,photo_url:photoUrl}));
+  function handlePhotoUpdate(benId,photoUrl,photoPath){
+    setBens(bs=>bs.map(b=>b.id===benId?{...b,photo_url:photoUrl,photo_path:photoPath}:b));
+    if(viewBen&&viewBen.id===benId)setView(v=>({...v,photo_url:photoUrl,photo_path:photoPath}));
   }
 
   async function saveBen(f){
