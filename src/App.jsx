@@ -774,7 +774,12 @@ function UserMgmt({users,setUsers,onToggle}){
   }
   async function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}await saveAppUser({...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)});setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
   async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
-  async function changePassword(){if(!pwForm.newPw||pwForm.newPw.length<6){setMsg("Min 6 characters.");return;}if(pwForm.newPw!==pwForm.confirmPw){setMsg("Passwords don't match.");return;}const ok=await updateUserPassword(changePwUser.id,pwForm.newPw);if(ok){setMsg("✅ Password changed!");}else{setMsg("Error changing password. Please try again.");}setChangePwUser(null);setPwForm({newPw:"",confirmPw:""});}
+  async function sendResetEmail(u){
+    const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin+"/reset"});
+    if(error){setMsg("❌ Could not send reset email: "+error.message);}
+    else{setMsg("✅ Password reset email sent to "+u.email+". They can follow the link to set a new password.");}
+    setChangePwUser(null);
+  }
   return(<div className="fade-in"><Topbar onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div style={{fontSize:13,color:T.grey}}>{users.length} users</div><Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn></div>
@@ -790,9 +795,9 @@ function UserMgmt({users,setUsers,onToggle}){
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={saveEdit}>Save</Btn><Btn variant="secondary" onClick={()=>setEditUser(null)}>Cancel</Btn></div>
       </div>}
       {changePwUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Change Password — {changePwUser.name}</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}><FI label="New Password *" value={pwForm.newPw} onChange={v=>setPwForm(p=>({...p,newPw:v}))} type="password"/><FI label="Confirm *" value={pwForm.confirmPw} onChange={v=>setPwForm(p=>({...p,confirmPw:v}))} type="password"/></div>
-        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={changePassword}>Update Password</Btn><Btn variant="secondary" onClick={()=>setChangePwUser(null)}>Cancel</Btn></div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:10}}>Reset Password — {changePwUser.name}</div>
+        <div style={{fontSize:13,color:T.grey,marginBottom:16}}>A password reset email will be sent to <strong>{changePwUser.email}</strong>. They will follow the link to set a new password.</div>
+        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>sendResetEmail(changePwUser)}>📧 Send Reset Email</Btn><Btn variant="secondary" onClick={()=>setChangePwUser(null)}>Cancel</Btn></div>
       </div>}
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -803,7 +808,7 @@ function UserMgmt({users,setUsers,onToggle}){
             <td style={{padding:"13px 16px"}}><span style={{background:u.role==="Admin"?"#FDEDEC":"#EBF5FB",color:u.role==="Admin"?"#C0392B":"#1A5276",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
             <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6}}>
               <button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>✏️ Edit</button>
-              <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>🔑 Password</button>
+              <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📧 Reset</button>
               {u.role!=="Admin"&&<button onClick={()=>deleteUser(u.id)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑 Remove</button>}
             </div></td>
           </tr>))}</tbody>
@@ -899,7 +904,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -995,8 +1000,9 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    loadAppUsers().then(u=>setUsers(u));
-  },[]);
+    if(user)loadAppUsers().then(u=>setUsers(u));
+    else setUsers([]);
+  },[user]);
 
   useEffect(()=>{
     async function loadSettings(){
