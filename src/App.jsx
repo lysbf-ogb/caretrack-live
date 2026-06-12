@@ -859,12 +859,14 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
     try{
       const ext=file.name.split(".").pop();
       const path=`app-logo/logo.${ext}`;
-      const{error:upErr}=await supabase.storage.from("beneficiary-photos").upload(path,file,{upsert:true,contentType:file.type});
+      const{error:upErr}=await supabase.storage.from(PHOTO_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
       if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
-      const{data:urlData}=supabase.storage.from("beneficiary-photos").getPublicUrl(path);
-      const url=urlData.publicUrl+"?t="+Date.now();
-      await supabase.from("settings").upsert({key:"logo_url",value:url},{onConflict:"key"});
-      setLogoUrl(url);setLogoMsg("✅ Logo saved!");
+      // Store the bare path — signed URL generated on load
+      await supabase.from("settings").upsert({key:"logo_url",value:path},{onConflict:"key"});
+      // Generate signed URL for immediate display
+      const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path,SIGNED_URL_TTL);
+      setLogoUrl(signData?.signedUrl||null);
+      setLogoMsg("✅ Logo saved!");
     }catch(err){setLogoMsg("❌ Unexpected error. Please try again.");}
     setLogoBusy(false);e.target.value="";
   }
@@ -897,7 +899,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1002,7 +1004,11 @@ export default function App(){
         const{data,error}=await supabase.from("settings").select("key,value");
         if(error||!data)return;
         const map={};data.forEach(r=>{if(r.key)map[r.key]=r.value;});
-        if(map["logo_url"])setLogoUrl(map["logo_url"]);
+        if(map["logo_url"]&&map["logo_url"].length>0){
+          // Generate a signed URL for the logo path
+          const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(map["logo_url"],SIGNED_URL_TTL);
+          if(signData?.signedUrl)setLogoUrl(signData.signedUrl);
+        }
       }catch(e){console.log("Settings load error:",e);}
     }
     loadSettings();
