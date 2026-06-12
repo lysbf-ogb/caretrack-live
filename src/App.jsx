@@ -9,6 +9,7 @@ const supabase = createClient(
 );
 
 const PHOTO_BUCKET="beneficiary-photos";
+const BRAND_BUCKET="app-branding"; // PUBLIC bucket for the logo only, so the sign-in page can show it
 const SIGNED_URL_TTL=60*60*8;
 
 if(!window.XLSX){const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";document.head.appendChild(s);}
@@ -890,13 +891,14 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
     try{
       const ext=file.name.split(".").pop();
       const path=`app-logo/logo.${ext}`;
-      const{error:upErr}=await supabase.storage.from(PHOTO_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
+      // The logo goes in the PUBLIC branding bucket (not the private photo
+      // bucket) so the sign-in page can display it before anyone logs in.
+      const{error:upErr}=await supabase.storage.from(BRAND_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
       if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
-      // Store the bare path — signed URL generated on load
-      await supabase.from("settings").upsert({key:"logo_url",value:path},{onConflict:"key"});
-      // Generate signed URL for immediate display
-      const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(path,SIGNED_URL_TTL);
-      setLogoUrl(signData?.signedUrl||null);
+      const{data:urlData}=supabase.storage.from(BRAND_BUCKET).getPublicUrl(path);
+      const publicUrl=urlData.publicUrl+"?t="+Date.now();
+      await supabase.from("settings").upsert({key:"logo_url",value:publicUrl},{onConflict:"key"});
+      setLogoUrl(publicUrl);
       setLogoMsg("✅ Logo saved!");
     }catch(err){setLogoMsg("❌ Unexpected error. Please try again.");}
     setLogoBusy(false);e.target.value="";
@@ -930,7 +932,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1041,13 +1043,23 @@ export default function App(){
         const{data,error}=await supabase.from("settings").select("key,value");
         if(error||!data)return;
         const map={};data.forEach(r=>{if(r.key)map[r.key]=r.value;});
-        if(map["logo_url"]&&map["logo_url"].length>0){
-          const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(map["logo_url"],SIGNED_URL_TTL);
-          if(signData?.signedUrl)setLogoUrl(signData.signedUrl);
+        const stored=map["logo_url"];
+        if(stored&&stored.length>0){
+          if(stored.startsWith("http")){
+            // New format: public URL from the branding bucket — works on the
+            // sign-in page too, which is the whole point.
+            setLogoUrl(stored);
+          }else if(user){
+            // Legacy format: a path in the private photo bucket. Can only be
+            // signed after login. Re-upload the logo in Settings once to
+            // migrate to the public branding bucket.
+            const{data:signData}=await supabase.storage.from(PHOTO_BUCKET).createSignedUrl(stored,SIGNED_URL_TTL);
+            if(signData?.signedUrl)setLogoUrl(signData.signedUrl);
+          }
         }
       }catch(e){console.log("Settings load error:",e);}
     }
-    if(user)loadSettings();
+    loadSettings();
   },[user]);
 
   useEffect(()=>{
