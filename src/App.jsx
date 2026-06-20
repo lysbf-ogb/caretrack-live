@@ -1136,6 +1136,8 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
   const [approvals,setApprovals]=useState({});
   const [viewUserId,setViewUserId]=useState(user.id);
   const [saving,setSaving]=useState({});
+  const [draftPlans,setDraftPlans]=useState({});
+  const [saveMsg,setSaveMsg]=useState("");
   const [commentInput,setCommentInput]=useState({});
   const [showCommentBox,setShowCommentBox]=useState({});
   const [approvalNote,setApprovalNote]=useState("");
@@ -1165,36 +1167,43 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
 
   const monthKey=`${year}-${String(month+1).padStart(2,"0")}`;
 
-  useEffect(()=>{loadData();},[viewUserId,month,year]);
+  useEffect(()=>{
+    loadData();
+    setDraftPlans({});
+    setSaveMsg("");
+  },[viewUserId,month,year]);
 
   async function loadData(){
-    // Load plans
     const{data:planData}=await supabase.from("activity_plans").select("*").eq("user_id",viewUserId).like("plan_date",`${year}-${String(month+1).padStart(2,"0")}-%`);
-    if(planData){
-      const map={};
-      planData.forEach(p=>{map[p.plan_date]=p;});
-      setPlans(map);
-    }
-    // Load comments
+    if(planData){const map={};planData.forEach(p=>{map[p.plan_date]=p;});setPlans(map);}
     const{data:commentData}=await supabase.from("plan_comments").select("*").eq("target_user_id",viewUserId).like("plan_date",`${year}-${String(month+1).padStart(2,"0")}-%`);
-    if(commentData){
-      const map={};
-      commentData.forEach(c=>{
-        if(!map[c.plan_date])map[c.plan_date]=[];
-        map[c.plan_date].push(c);
-      });
-      setComments(map);
-    }
-    // Load approval
+    if(commentData){const map={};commentData.forEach(c=>{if(!map[c.plan_date])map[c.plan_date]=[];map[c.plan_date].push(c);});setComments(map);}
     const{data:approvalData}=await supabase.from("plan_approvals").select("*").eq("officer_id",viewUserId).eq("month",monthKey).single();
     if(approvalData)setApprovals(a=>({...a,[viewUserId+monthKey]:approvalData}));
   }
 
-  async function savePlan(dateStr,text){
-    setSaving(s=>({...s,[dateStr]:true}));
-    await supabase.from("activity_plans").upsert({user_id:viewUserId,plan_date:dateStr,activity:text,updated_at:new Date().toISOString()},{onConflict:"user_id,plan_date"});
-    setPlans(p=>({...p,[dateStr]:{...p[dateStr],activity:text}}));
-    setSaving(s=>({...s,[dateStr]:false}));
+  async function saveAllPlans(){
+    const entries=Object.entries(draftPlans);
+    if(entries.length===0){setSaveMsg("ℹ️ No changes to save.");setTimeout(()=>setSaveMsg(""),3000);return;}
+    setSaving({all:true});
+    for(const[dateStr,text]of entries){
+      await supabase.from("activity_plans").upsert({user_id:user.id,plan_date:dateStr,activity:text,updated_at:new Date().toISOString()},{onConflict:"user_id,plan_date"});
+      setPlans(p=>({...p,[dateStr]:{...p[dateStr],activity:text}}));
+    }
+    setDraftPlans({});
+    setSaving({});
+    setSaveMsg("✅ Plan saved successfully!");
+    // Notify coordinator
+    const coordId=users.find(u2=>u2.id===user.id)?.coordinator_id;
+    if(coordId){
+      await createNotification(
+        coordId,"comment",
+        `Plan submitted: ${user.name}`,
+        `${user.name} has saved their activity plan for ${MONTHS[month]} ${year}. Please review.`,
+        null,null
+      );
+    }
+    setTimeout(()=>setSaveMsg(""),4000);
   }
 
   async function submitComment(dateStr){
@@ -1353,8 +1362,8 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
                 {/* Plan text - editable if own plan */}
                 {isOwnPlan
                   ?<textarea
-                      defaultValue={plan?.activity||""}
-                      onBlur={e=>e.target.value!==((plan?.activity)||"")&&savePlan(dateStr,e.target.value)}
+                      value={draftPlans[dateStr]!==undefined?draftPlans[dateStr]:(plan?.activity||"")}
+                      onChange={e=>day.current&&setDraftPlans(d=>({...d,[dateStr]:e.target.value}))}
                       placeholder={day.current?"Add plan...":""}
                       spellCheck="true"
                       disabled={!day.current}
@@ -1381,11 +1390,25 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
                     </div>
                   }
                 </div>}
-                {saving[dateStr]&&<div style={{position:"absolute",top:2,right:4,fontSize:8,color:T.grey}}>saving…</div>}
+                {saving[dateStr]&&<div style={{position:"absolute",top:2,right:4,fontSize:8,color:T.grey}}></div>}
               </div>);
             })}
           </div>
         ))}
+      </div>
+
+      {/* Save Plan button — only for own plan */}
+      {isOwnPlan&&<div style={{marginTop:16,display:"flex",alignItems:"center",gap:12}}>
+        <button
+          onClick={saveAllPlans}
+          disabled={saving.all}
+          style={{padding:"10px 28px",borderRadius:9,border:"none",cursor:saving.all?"not-allowed":"pointer",fontSize:13,fontWeight:700,background:Object.keys(draftPlans).length>0?"#1E6B3C":"#A9DFBF",color:"#fff",transition:"background 0.2s",opacity:saving.all?0.7:1}}
+        >
+          {saving.all?"Saving...":"💾 Save Plan"}
+        </button>
+        {Object.keys(draftPlans).length>0&&!saving.all&&<span style={{fontSize:12,color:"#E67E22",fontWeight:600}}>● Unsaved changes</span>}
+        {saveMsg&&<span style={{fontSize:12,color:saveMsg.includes("✅")?"#1D8348":saveMsg.includes("ℹ️")?"#1A5276":"#C0392B",fontWeight:600}}>{saveMsg}</span>}
+      </div>}
       </div>
     </div>
 
@@ -1451,7 +1474,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
