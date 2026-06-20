@@ -221,12 +221,14 @@ function NotificationBell({user,onNavigateToBen}){
   }
 
   async function handleNotifClick(notif){
-    // Mark as read
     await supabase.from("notifications").update({is_read:true}).eq("id",notif.id);
     setNotifs(n=>n.map(x=>x.id===notif.id?{...x,is_read:true}:x));
     setOpen(false);
-    // Navigate to beneficiary follow-ups tab
-    if(notif.beneficiary_id)onNavigateToBen(notif.beneficiary_id);
+    if(notif.type==="plan"&&notif.post_id){
+      onNavigateToBen(null,{type:"planner",targetUserId:notif.post_id});
+    } else if(notif.beneficiary_id){
+      onNavigateToBen(notif.beneficiary_id,null);
+    }
   }
 
   const typeIcon=(type)=>{
@@ -1127,14 +1129,14 @@ function MyOfficers({user,users,bens,onNavigate,onToggle,onNavigateToBen}){
   </div>);
 }
 
-function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
+function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavigateToBen}){
   const now=new Date();
   const [year,setYear]=useState(now.getFullYear());
   const [month,setMonth]=useState(now.getMonth());
   const [plans,setPlans]=useState({});
   const [comments,setComments]=useState({});
   const [approvals,setApprovals]=useState({});
-  const [viewUserId,setViewUserId]=useState(user.id);
+  const [viewUserId,setViewUserId]=useState(initialTarget||user.id);
   const [saving,setSaving]=useState({});
   const [draftPlans,setDraftPlans]=useState({});
   const [saveMsg,setSaveMsg]=useState("");
@@ -1142,6 +1144,14 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
   const [showCommentBox,setShowCommentBox]=useState({});
   const [approvalNote,setApprovalNote]=useState("");
   const [showApprovalBox,setShowApprovalBox]=useState(false);
+
+  // When initialTarget changes (from notification click), switch to that officer
+  useEffect(()=>{
+    if(initialTarget){
+      setViewUserId(initialTarget);
+      onClearTarget&&onClearTarget();
+    }
+  },[initialTarget]);
   const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
   const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
@@ -1197,10 +1207,10 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
     const coordId=users.find(u2=>u2.id===user.id)?.coordinator_id;
     if(coordId){
       await createNotification(
-        coordId,"comment",
+        coordId,"plan",
         `Plan submitted: ${user.name}`,
         `${user.name} has saved their activity plan for ${MONTHS[month]} ${year}. Please review.`,
-        null,null
+        null,user.id
       );
     }
     setTimeout(()=>setSaveMsg(""),4000);
@@ -1216,10 +1226,10 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
       setShowCommentBox(s=>({...s,[dateStr]:false}));
       // Notify the target user
       await createNotification(
-        viewUserId,"comment",
+        viewUserId,"plan",
         `New instruction on your plan`,
         `${user.name} (${user.role}) added a note to your plan for ${dateStr}: "${text.slice(0,60)}${text.length>60?"...":""}"`,
-        null,null
+        null,user.id
       );
     }
   }
@@ -1238,7 +1248,7 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
     const msg=status==="Approved"
       ?`${user.name} approved your activity plan for ${MONTHS[month]} ${year}`
       :`${user.name} marked your plan for ${MONTHS[month]} ${year} as "${status}"${approvalNote?": "+approvalNote:""}`;
-    await createNotification(viewUserId,"comment",`Plan ${status}: ${MONTHS[month]} ${year}`,msg,null,null);
+    await createNotification(viewUserId,"plan",`Plan ${status}: ${MONTHS[month]} ${year}`,msg,null,user.id);
   }
 
   // Build calendar grid
@@ -1464,7 +1474,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1536,7 +1546,7 @@ function PostModal({ben,user,onSave,onClose}){
 export default function App(){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);const [page,setPage]=useState("dashboard");
   const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
-  const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);
+  const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);const [plannerTarget,setPlannerTarget]=useState(null);
   const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
   const [sidebarOpen,setSidebarOpen]=useState(true);const [recovery,setRecovery]=useState(false);
 
@@ -1707,7 +1717,13 @@ export default function App(){
 
   if(!user)return <Login onLogin={u=>{setUser(u);setPage("dashboard");try{sessionStorage.setItem("ogb_user",JSON.stringify(u));}catch(e){};}} users={users} logoUrl={logoUrl}/>;
 
-  function navigateToBen(beneficiaryId){
+  function navigateToBen(beneficiaryId, extra){
+    if(extra?.type==="planner"){
+      // Navigate to planner with the target officer pre-selected
+      setPlannerTarget(extra.targetUserId||null);
+      nav("planner");
+      return;
+    }
     const ben=bens.find(b=>b.id===beneficiaryId);
     if(ben){viewProfile(ben);}
   }
@@ -1729,7 +1745,7 @@ export default function App(){
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page==="planner")return <ActivityPlanner user={user} users={users} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="planner")return <ActivityPlanner user={user} users={users} initialTarget={plannerTarget} onClearTarget={()=>setPlannerTarget(null)} onToggle={tog} onNavigateToBen={navBen}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
   }
 
