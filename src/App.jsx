@@ -242,6 +242,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
         <NI label="Posts" icon="💬" p="posts"/>
         <NI label="My Account" icon="👤" p="my-account"/>
         {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
+      {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Officers" icon="👥" p="my-officers"/></>}
       </div>
       <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
     </div>
@@ -249,7 +250,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
 }
 
 function Dashboard({bens,user,onNavigate,onToggle}){
-  const vis=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
+  const vis=(user.role==="Admin"||user.role==="Programme Coordinator")?bens:bens.filter(b=>b.assigned_to===user.id);
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
   const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
@@ -330,7 +331,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
   const regions=[...new Set(bens.map(b=>b.region).filter(Boolean))].sort();
   const enrollYears=[...new Set(bens.map(b=>b.enroll_date?b.enroll_date.slice(0,4):null).filter(Boolean))].sort();
   function getQuarter(dateStr){if(!dateStr)return null;const m=new Date(dateStr).getMonth()+1;if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4";}
-  const vis=(user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id))
+  const vis=((user.role==="Admin"||user.role==="Programme Coordinator")?bens:bens.filter(b=>b.assigned_to===user.id))
     .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.region===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
@@ -400,7 +401,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
                 <button className="action-btn" onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
-                {(user.role==="Admin"||b.assigned_to===user.id)&&<button className="action-btn" onClick={()=>onEdit(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✏️ Edit</button>}
+                {(user.role==="Admin"||user.role==="Programme Coordinator"||b.assigned_to===user.id)&&<button className="action-btn" onClick={()=>onEdit(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✏️ Edit</button>}
                 <button className="action-btn" onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
               </div></td>
             </tr>);})}
@@ -506,7 +507,7 @@ function FollowUpsTab({ben,user,onAddPost}){
     setLoading(l=>({...l,[postId]:false}));
   }
   return(<div>
-    {(user.role==="Admin"||ben.assigned_to===user.id)&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
+    {(user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id)&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
     {(!ben.posts||ben.posts.length===0)&&<div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
     {(ben.posts||[]).slice().reverse().map(p=>(<div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
       <div style={{display:"flex",gap:10,marginBottom:12}}>
@@ -529,7 +530,7 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
   const fileRef=useRef();
   const [uploading,setUploading]=useState(false);
   const [msg,setMsg]=useState("");
-  const canEdit=user.role==="Admin"||ben.assigned_to===user.id;
+  const canEdit=user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id;
   if(!canEdit)return null;
   async function handleFile(e){
     const file=e.target.files[0];
@@ -709,11 +710,15 @@ function AutoInput({label,value,onChange,suggestions,placeholder,full}){
 }
 
 function BenForm({user,edit,users,onSave,onCancel,onToggle,communitySuggestions,districtSuggestions,citySuggestions}){
-  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"",district:"",city:"",area:"",physical_desc:"",address:"",community:"",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,enroll_date:today()};
+  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"",district:"",city:"",area:"",physical_desc:"",address:"",community:"",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,coordinator_id:user.role==="Programme Coordinator"?user.id:null,enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank);const [busy,setBusy]=useState(false);
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   function handleDob(dob){const age=dob?Math.floor((new Date()-new Date(dob))/(365.25*24*60*60*1000)):null;setF(p=>({...p,dob,age:age&&age>0?String(age):p.age}));}
-  const officers=users.filter(u=>u.role!=="Admin").map(u=>({value:u.id,label:u.name}));
+  // Officers available for assignment depending on role
+  const myOfficers=user.role==="Programme Coordinator"
+    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id)
+    :users.filter(u=>u.role==="Programme Officer");
+  const canAssign=user.role==="Admin"||user.role==="Programme Coordinator";
   return(<div className="fade-in"><Topbar onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}><Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
       <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
@@ -738,7 +743,7 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,communitySuggestions,
           <FI label="Programme Component" value={String(f.component_id)} onChange={v=>s("component_id",Number(v))} options={COMPONENTS.map(c=>({value:String(c.id),label:`${c.icon} ${c.name}`}))}/>
           <FI label="Status" value={f.status} onChange={v=>s("status",v)} options={["Active","Completed","On Hold"]}/>
           <FI label="Enrolment Date" value={f.enroll_date} onChange={v=>s("enroll_date",v)} type="date"/>
-          {user.role==="Admin"&&officers.length>0&&<FI label="Assign to Officer" value={String(f.assigned_to)} onChange={v=>s("assigned_to",v)} options={[{value:user.id,label:"Me (Admin)"},...officers]}/>}
+          {canAssign&&myOfficers.length>0&&<FI label="Assign to Officer" value={String(f.assigned_to)} onChange={v=>s("assigned_to",v)} options={[{value:user.id,label:`Me (${user.role})`},...myOfficers.map(u=>({value:u.id,label:u.name}))]}/>}
         </div>
         <SH>Health Information</SH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:28}}>
@@ -771,35 +776,54 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,communitySuggestions,
 }
 
 function PostsPage({bens,user,onToggle}){
-  const mine=user.role==="Admin"?bens:bens.filter(b=>b.assigned_to===user.id);
+  const myOfficerIds=user.role==="Programme Coordinator"
+    ?bens.flatMap(()=>[]).concat([user.id]) // coordinator sees all bens already
+    :null;
+  const mine=user.role==="Admin"||user.role==="Programme Coordinator"
+    ?bens
+    :bens.filter(b=>b.assigned_to===user.id);
   const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id,photo_url:b.photo_url}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
-  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Posts" sub="Your latest follow-up notes and updates"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Posts" sub="Latest follow-up notes and updates"/>
     <div style={{padding:"24px 32px"}}>
       {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet.</div>}
-      {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={{name:p.benName,photo_url:p.photo_url}} size={32} fontSize={11}/><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div></div><div style={{fontSize:12,color:T.grey}}>{p.date}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
+      {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={{name:p.benName,photo_url:p.photo_url}} size={32} fontSize={11}/><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div></div><div style={{fontSize:12,color:T.grey}}>{p.visit_date||p.date}{p.visit_type&&<span style={{marginLeft:8,background:"#EBF5FB",color:"#1A5276",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{p.visit_type}</span>}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name} · {p.author}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
     </div>
   </div>);
 }
 
 function UserMgmt({users,setUsers,onToggle}){
   const [showAdd,setShowAdd]=useState(false);const [editUser,setEditUser]=useState(null);const [changePwUser,setChangePwUser]=useState(null);
-  const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer"});
-  const [pwForm,setPwForm]=useState({newPw:"",confirmPw:""});const [msg,setMsg]=useState("");
+  const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer",coordinator_id:""});
+  const [msg,setMsg]=useState("");
   const s=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const coordinators=users.filter(u=>u.role==="Programme Coordinator");
+  const roleColor=(role)=>{
+    if(role==="Admin")return{bg:"#FDEDEC",color:"#C0392B"};
+    if(role==="Programme Coordinator")return{bg:"#F5EEF8",color:"#6C3483"};
+    return{bg:"#EBF5FB",color:"#1A5276"};
+  };
   async function addUser(){
     if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}
     if(users.find(u=>u.email===form.email)){setMsg("Email already exists.");return;}
     if(form.password.length<6){setMsg("Password must be at least 6 characters.");return;}
-    const nu={id:`officer-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name)};
+    const nu={id:`user-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name),coordinator_id:form.role==="Programme Officer"?form.coordinator_id||null:null};
     const ok=await saveAppUser(nu);
     if(!ok){setMsg("❌ Error creating user. This email may already be registered. Please use a different email.");return;}
     const{data:newProfile}=await supabase.from("app_users").select("*").eq("email",form.email.toLowerCase()).single();
+    if(newProfile&&nu.coordinator_id){await supabase.from("app_users").update({coordinator_id:nu.coordinator_id}).eq("id",newProfile.id);}
     setUsers(u=>[...u,newProfile||nu]);
     setMsg("✅ User created! They can now log in with the password you set.");
-    setForm({name:"",email:"",password:"",role:"Programme Officer"});
+    setForm({name:"",email:"",password:"",role:"Programme Officer",coordinator_id:""});
     setShowAdd(false);
   }
-  async function saveEdit(){if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}await saveAppUser({...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)});setUsers(u=>u.map(x=>x.id===editUser.id?{...x,name:editUser.name,email:editUser.email,avatar:inits(editUser.name)}:x));setMsg("✅ User updated!");setEditUser(null);}
+  async function saveEdit(){
+    if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}
+    const updates={...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name),coordinator_id:editUser.coordinator_id||null};
+    await saveAppUser(updates);
+    await supabase.from("app_users").update({coordinator_id:editUser.coordinator_id||null}).eq("id",editUser.id);
+    setUsers(u=>u.map(x=>x.id===editUser.id?{...x,...updates}:x));
+    setMsg("✅ User updated!");setEditUser(null);
+  }
   async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
   async function sendResetEmail(u){
     const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin});
@@ -813,12 +837,22 @@ function UserMgmt({users,setUsers,onToggle}){
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
       {showAdd&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Create New User</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}><FI label="Full Name *" value={form.name} onChange={v=>s("name",v)}/><FI label="Email *" value={form.email} onChange={v=>s("email",v)} type="email"/><FI label="Password *" value={form.password} onChange={v=>s("password",v)} type="password"/><FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer","Admin"]}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+          <FI label="Full Name *" value={form.name} onChange={v=>s("name",v)}/>
+          <FI label="Email *" value={form.email} onChange={v=>s("email",v)} type="email"/>
+          <FI label="Password *" value={form.password} onChange={v=>s("password",v)} type="password"/>
+          <FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer","Programme Coordinator","Admin"]}/>
+          {form.role==="Programme Officer"&&coordinators.length>0&&<FI label="Assign to Coordinator" value={form.coordinator_id} onChange={v=>s("coordinator_id",v)} options={[{value:"",label:"— None —"},...coordinators.map(c=>({value:c.id,label:c.name}))]}/>}
+        </div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={addUser}>Create Account</Btn><Btn variant="secondary" onClick={()=>setShowAdd(false)}>Cancel</Btn></div>
       </div>}
       {editUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Edit User</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}><FI label="Full Name *" value={editUser.name} onChange={v=>setEditUser(u=>({...u,name:v}))}/><FI label="Email *" value={editUser.email} onChange={v=>setEditUser(u=>({...u,email:v}))} type="email"/></div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Edit User — {editUser.name}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+          <FI label="Full Name *" value={editUser.name} onChange={v=>setEditUser(u=>({...u,name:v}))}/>
+          <FI label="Email *" value={editUser.email} onChange={v=>setEditUser(u=>({...u,email:v}))} type="email"/>
+          {editUser.role==="Programme Officer"&&coordinators.length>0&&<FI label="Assigned Coordinator" value={editUser.coordinator_id||""} onChange={v=>setEditUser(u=>({...u,coordinator_id:v}))} options={[{value:"",label:"— None —"},...coordinators.map(c=>({value:c.id,label:c.name}))]}/>}
+        </div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={saveEdit}>Save</Btn><Btn variant="secondary" onClick={()=>setEditUser(null)}>Cancel</Btn></div>
       </div>}
       {changePwUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
@@ -828,17 +862,22 @@ function UserMgmt({users,setUsers,onToggle}){
       </div>}
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
-          <tbody>{users.map((u,i)=>(<tr key={u.id} style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`}}>
-            <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:34,height:34,borderRadius:"50%",background:aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(u.name)}</div><span style={{fontWeight:700,fontSize:13,color:T.navy}}>{u.name}</span></div></td>
-            <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
-            <td style={{padding:"13px 16px"}}><span style={{background:u.role==="Admin"?"#FDEDEC":"#EBF5FB",color:u.role==="Admin"?"#C0392B":"#1A5276",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
-            <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6}}>
-              <button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>✏️ Edit</button>
-              <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📧 Reset</button>
-              {u.role!=="Admin"&&<button onClick={()=>deleteUser(u.id)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑 Remove</button>}
-            </div></td>
-          </tr>))}</tbody>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role","Coordinator","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <tbody>{users.map((u,i)=>{
+            const rc=roleColor(u.role);
+            const coord=u.coordinator_id?users.find(x=>x.id===u.coordinator_id):null;
+            return(<tr key={u.id} style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`}}>
+              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:34,height:34,borderRadius:"50%",background:aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(u.name)}</div><span style={{fontWeight:700,fontSize:13,color:T.navy}}>{u.name}</span></div></td>
+              <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
+              <td style={{padding:"13px 16px"}}><span style={{background:rc.bg,color:rc.color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
+              <td style={{padding:"13px 16px",fontSize:12,color:T.grey}}>{coord?coord.name:"—"}</td>
+              <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6}}>
+                <button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>✏️ Edit</button>
+                <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📧 Reset</button>
+                {u.role!=="Admin"&&<button onClick={()=>deleteUser(u.id)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑 Remove</button>}
+              </div></td>
+            </tr>);
+          })}</tbody>
         </table>
       </div>
     </div>
@@ -864,7 +903,7 @@ function MyAccount({user,users,setUsers,onToggle}){
         <SH>Profile</SH>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:60,height:60,borderRadius:"50%",background:aColor(user.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:22,color:"#fff"}}>{inits(user.name)}</div>
-          <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:T.navy}}>{user.name}</div><div style={{fontSize:13,color:T.grey}}>{user.email}</div><span style={{background:user.role==="Admin"?"#FDEDEC":"#EBF5FB",color:user.role==="Admin"?"#C0392B":"#1A5276",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block",marginTop:4}}>{user.role}</span></div>
+          <div><div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:T.navy}}>{user.name}</div><div style={{fontSize:13,color:T.grey}}>{user.email}</div><span style={{background:user.role==="Admin"?"#FDEDEC":user.role==="Programme Coordinator"?"#F5EEF8":"#EBF5FB",color:user.role==="Admin"?"#C0392B":user.role==="Programme Coordinator"?"#6C3483":"#1A5276",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block",marginTop:4}}>{user.role}</span></div>
         </div>
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
@@ -876,6 +915,46 @@ function MyAccount({user,users,setUsers,onToggle}){
           <FI label="Confirm New Password *" value={pwForm.confirm} onChange={v=>setPwForm(p=>({...p,confirm:v}))} type="password"/>
         </div>
         <Btn variant="primary" onClick={changeMyPassword}>Update Password</Btn>
+      </div>
+    </div>
+  </div>);
+}
+
+function MyOfficers({user,users,bens,onToggle}){
+  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="My Officers" sub="Programme officers under your supervision"/>
+    <div style={{padding:"24px 32px"}}>
+      {myOfficers.length===0&&<div style={{background:"#fff",borderRadius:12,padding:32,textAlign:"center",color:T.grey,fontSize:14,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>No officers assigned to you yet. Ask an Admin to assign officers under your coordination.</div>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
+        {myOfficers.map(officer=>{
+          const myBens=bens.filter(b=>b.assigned_to===officer.id);
+          const active=myBens.filter(b=>b.status==="Active").length;
+          const overdue=myBens.filter(b=>{if(!b.last_follow_up)return true;const d=new Date(b.last_follow_up);const diff=(new Date()-d)/(1000*60*60*24);return diff>90;}).length;
+          const totalPosts=myBens.reduce((sum,b)=>(b.posts||[]).length+sum,0);
+          return(<div key={officer.id} style={{background:"#fff",borderRadius:12,padding:"20px 22px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:aColor(officer.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:16,color:"#fff",flexShrink:0}}>{inits(officer.name)}</div>
+              <div><div style={{fontWeight:700,fontSize:15,color:T.navy}}>{officer.name}</div><div style={{fontSize:12,color:T.grey}}>{officer.email}</div></div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:0}}>
+              <div style={{background:T.off,borderRadius:8,padding:"10px 0",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:700,color:T.navy}}>{myBens.length}</div>
+                <div style={{fontSize:10,color:T.grey,textTransform:"uppercase",letterSpacing:0.5}}>Cases</div>
+              </div>
+              <div style={{background:"#EAFAF1",borderRadius:8,padding:"10px 0",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:700,color:"#1D8348"}}>{active}</div>
+                <div style={{fontSize:10,color:"#1D8348",textTransform:"uppercase",letterSpacing:0.5}}>Active</div>
+              </div>
+              <div style={{background:overdue>0?"#FDEDEC":T.off,borderRadius:8,padding:"10px 0",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:700,color:overdue>0?"#C0392B":T.grey}}>{overdue}</div>
+                <div style={{fontSize:10,color:overdue>0?"#C0392B":T.grey,textTransform:"uppercase",letterSpacing:0.5}}>Overdue</div>
+              </div>
+            </div>
+            <div style={{marginTop:10,fontSize:12,color:T.grey,borderTop:`1px solid ${T.greyL}`,paddingTop:10}}>
+              💬 {totalPosts} follow-up note{totalPosts!==1?"s":""} recorded
+            </div>
+          </div>);
+        })}
       </div>
     </div>
   </div>);
@@ -932,7 +1011,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1113,7 +1192,7 @@ export default function App(){
   }
 
   async function saveBen(f){
-    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:f.assigned_to||user.id,enroll_date:f.enroll_date||today()};
+    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:f.assigned_to||user.id,coordinator_id:f.coordinator_id||null,enroll_date:f.enroll_date||today()};
     try{
       if(editBen){const{data,error}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select().single();if(error){alert("Error: "+error.message);return;}if(data){const{data:posts}=await supabase.from("posts").select("*").eq("beneficiary_id",data.id);setBens(bs=>bs.map(b=>b.id===editBen.id?{...data,photo_url:editBen.photo_url,posts:posts||[]}:b));}}
       else{const{data,error}=await supabase.from("beneficiaries").insert([payload]).select().single();if(error){alert("Error: "+error.message);return;}if(data)setBens(bs=>[...bs,{...data,posts:[]}]);}
@@ -1147,6 +1226,7 @@ export default function App(){
     if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>viewProfile(b)} onEdit={b=>viewEdit(b)} onSIR={b=>viewSIR(b)} initialFilter={dashFilter} onToggle={tog}/>;
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog}/>;
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
+    if(page==="my-officers"&&user.role==="Programme Coordinator")return <MyOfficers user={user} users={users} bens={bens} onToggle={tog}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
