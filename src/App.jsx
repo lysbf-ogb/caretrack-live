@@ -641,7 +641,7 @@ function FollowUpsTab({ben,user,onAddPost}){
         await createNotification(
           ben.assigned_to,"comment",
           `Comment on ${ben.name}'s case`,
-          `${user.name} (${user.role}) commented: "${text.slice(0,60)}${text.length>60?"...":"}"`,
+          `${user.name} (${user.role}) commented: "${text.slice(0,60)}${text.length>60?"...":""}"`,  // preview
           ben.id,postId
         );
       }
