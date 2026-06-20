@@ -360,7 +360,7 @@ function Dashboard({bens,user,users,onNavigate,onToggle,onNavigateToBen}){
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
   const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Dashboard" sub="View current tasks, activities and reports"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
@@ -489,7 +489,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
     XLSX.writeFile(wb,`LYSBF_CYEP_Beneficiaries_${date}.xlsx`);
   }
 
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Beneficiaries" sub={viewingOfficer?`Viewing ${viewingOfficer.name}'s cases`:"View and manage all beneficiary profiles"}/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Beneficiaries" sub={viewingOfficer?`Viewing ${viewingOfficer.name}'s cases`:"View and manage all beneficiary profiles"}/>
     <div style={{padding:"24px 32px"}}>
       {viewingOfficer&&<div style={{background:"#EBF5FB",border:"1px solid #AED6F1",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{fontSize:13,color:"#1A5276"}}>👁️ Viewing cases for <strong>{viewingOfficer.name}</strong></div>
@@ -574,7 +574,7 @@ function BenMgmt({bens,setBens,onToggle,onNavigateToBen}){
 
   const sorted=[...bens].sort((a,b)=>(a.name||"").localeCompare(b.name||""));
 
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Beneficiary Management" sub="Admin only — permanently remove beneficiary records"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Beneficiary Management" sub="Admin only — permanently remove beneficiary records"/>
     <div style={{padding:"24px 32px"}}>
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
       <div style={{fontSize:13,color:T.grey,marginBottom:14}}>{bens.length} {bens.length===1?"beneficiary":"beneficiaries"} on record</div>
@@ -745,7 +745,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
     setLocalBen(b=>({...b,photo_url:url,photo_path:path}));
     onPhotoUpdate(localBen.id,url,path);
   }
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title={localBen.name} sub={`Profile · ${localBen.bid}`}/>
     <div style={{padding:"24px 32px"}}>
       <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back to List</Btn><Btn variant="navy" onClick={()=>onSIR(localBen)}>📝 Generate SIR</Btn></div>
       <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
@@ -787,10 +787,10 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
 }
 
 function SIRView({ben,users,onBack,onToggle,onNavigateToBen}){
-  if(!ben)return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
+  if(!ben)return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
   const officer=users.find(u=>u.id===ben.assigned_to);
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Social Inquiry Report" sub={`${ben.name} · ${ben.bid}`}/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Inquiry Report" sub={`${ben.name} · ${ben.bid}`}/>
     <div style={{padding:"24px 32px"}}>
       <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back</Btn><Btn variant="navy" onClick={()=>window.print()}>🖨 Print as PDF</Btn></div>
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
@@ -861,7 +861,7 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,commu
     ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id)
     :users.filter(u=>u.role==="Programme Officer");
   const canAssign=user.role==="Admin"||user.role==="Programme Coordinator";
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}><Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
       <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Basic Demographics</SH>
@@ -925,7 +925,7 @@ function PostsPage({bens,user,onToggle,onNavigateToBen}){
     ?bens
     :bens.filter(b=>b.assigned_to===user.id);
   const all=mine.flatMap(b=>(b.posts||[]).map(p=>({...p,benName:b.name,bid:b.bid,comp:b.component_id,photo_url:b.photo_url}))).sort((a,b2)=>(b2.date||"").localeCompare(a.date||""));
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Posts" sub="Latest follow-up notes and updates"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Posts" sub="Latest follow-up notes and updates"/>
     <div style={{padding:"24px 32px"}}>
       {all.length===0&&<div style={{textAlign:"center",color:T.grey,padding:44,fontSize:14}}>No posts yet.</div>}
       {all.map((p,i)=>{const c=COMPONENTS.find(x=>x.id===p.comp);return(<div key={i} style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,borderLeft:`4px solid ${c?.color||"#27AE60"}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={{name:p.benName,photo_url:p.photo_url}} size={32} fontSize={11}/><div style={{fontWeight:700,color:T.navy,fontSize:14}}>{p.benName} <span style={{color:T.grey,fontWeight:400,fontSize:12}}>({p.bid})</span></div></div><div style={{fontSize:12,color:T.grey}}>{p.visit_date||p.date}{p.visit_type&&<span style={{marginLeft:8,background:"#EBF5FB",color:"#1A5276",padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700}}>{p.visit_type}</span>}</div></div><div style={{fontSize:11,color:T.grey,marginBottom:8}}>{c?.icon} {c?.name} · {p.author}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.65}}>{p.text}</div></div>);})}
@@ -973,7 +973,7 @@ function UserMgmt({users,setUsers,onToggle,onNavigateToBen}){
     else{setMsg("✅ Password reset email sent to "+u.email+". They can follow the link to set a new password.");}
     setChangePwUser(null);
   }
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div style={{fontSize:13,color:T.grey}}>{users.length} users</div><Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn></div>
       {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
@@ -1039,7 +1039,7 @@ function MyAccount({user,users,setUsers,onToggle,onNavigateToBen}){
     else setMsg("Error saving. Please try again.");
     setPwForm({current:"",newPw:"",confirm:""});
   }
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="My Account" sub="Manage your account settings"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="My Account" sub="Manage your account settings"/>
     <div style={{padding:"24px 32px",maxWidth:600}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:20}}>
         <SH>Profile</SH>
@@ -1064,7 +1064,7 @@ function MyAccount({user,users,setUsers,onToggle,onNavigateToBen}){
 
 function MyOfficers({user,users,bens,onNavigate,onToggle,onNavigateToBen}){
   const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="My Officers" sub="Programme officers under your supervision"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="My Officers" sub="Programme officers under your supervision"/>
     <div style={{padding:"24px 32px"}}>
       {myOfficers.length===0&&<div style={{background:"#fff",borderRadius:12,padding:32,textAlign:"center",color:T.grey,fontSize:14,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>No officers assigned to you yet. Ask an Admin to assign officers under your coordination.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
@@ -1132,7 +1132,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
     setLogoBusy(false);
   }
 
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={navBen} onToggle={onToggle} title="Settings" sub="App configuration — Admin only"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Settings" sub="App configuration — Admin only"/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
@@ -1154,7 +1154,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
