@@ -154,7 +154,7 @@ const FI=({label,value,onChange,type="text",options,full,readOnly,placeholder})=
   <div style={{display:"flex",flexDirection:"column",gap:5,...(full?{gridColumn:"1/-1"}:{})}}>
     <Lbl c={label}/>
     {options?<select value={value||""} onChange={e=>onChange&&onChange(e.target.value)} disabled={readOnly} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy}}>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>
-    :type==="textarea"?<textarea value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy,minHeight:80,resize:"vertical"}}/>
+    :type==="textarea"?<textarea spellCheck={true} value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy,minHeight:80,resize:"vertical"}}/>
     :<input type={type} value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy}}/>}
   </div>
 );
@@ -636,14 +636,28 @@ function FollowUpsTab({ben,user,onAddPost}){
     if(data){
       setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));
       setNewComment(n=>({...n,[postId]:""}));
-      // Notify the assigned officer when coordinator or admin comments
-      if((user.role==="Programme Coordinator"||user.role==="Admin")&&ben.assigned_to&&ben.assigned_to!==user.id){
-        await createNotification(
-          ben.assigned_to,"comment",
-          `Comment on ${ben.name}'s case`,
-          `${user.name} (${user.role}) commented: "${text.slice(0,60)}${text.length>60?"...":""}"`,  // preview
-          ben.id,postId
-        );
+      const preview=`"${text.slice(0,60)}${text.length>60?"...":""}"`;
+      if(user.role==="Programme Coordinator"||user.role==="Admin"){
+        // Coordinator/Admin commented — notify the assigned officer
+        if(ben.assigned_to&&ben.assigned_to!==user.id){
+          await createNotification(
+            ben.assigned_to,"comment",
+            `Comment on ${ben.name}'s case`,
+            `${user.name} (${user.role}) commented: ${preview}`,
+            ben.id,postId
+          );
+        }
+      } else if(user.role==="Programme Officer"){
+        // Officer replied — notify their coordinator
+        const coordId=ben.coordinator_id;
+        if(coordId&&coordId!==user.id){
+          await createNotification(
+            coordId,"comment",
+            `Officer reply on ${ben.name}'s case`,
+            `${user.name} replied: ${preview}`,
+            ben.id,postId
+          );
+        }
       }
     }
     setLoading(l=>({...l,[postId]:false}));
@@ -661,7 +675,7 @@ function FollowUpsTab({ben,user,onAddPost}){
         <div style={{flex:1}}><div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div></div>
       </div>))}
       <div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
-        <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id,p)} placeholder="Write a comment or reply..." style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+        <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id,p)} placeholder="Write a comment or reply..." spellCheck={true} style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
         <button onClick={()=>submitComment(p.id,p)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
       </div>
     </div>))}
@@ -1154,7 +1168,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1213,7 +1227,7 @@ function PostModal({ben,user,onSave,onClose}){
       </div>
       <div style={{height:1,background:T.greyM,margin:"16px 0"}}/>
       <Lbl c="Follow-Up Notes *"/>
-      <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
+      <textarea spellCheck={true} value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
       {!canSave&&<div style={{fontSize:12,color:"#E67E22",marginBottom:12}}>⚠️ Please select at least one visit type and add a note before saving.</div>}
       <div style={{display:"flex",gap:10}}>
         <Btn variant="primary" onClick={save} style={{opacity:busy?0.6:1}}>{busy?"Saving...":"Save Follow-Up"}</Btn>
