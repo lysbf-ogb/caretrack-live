@@ -810,7 +810,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
   </div>);
 }
 
-function SIRView({ben,users,onBack,onToggle,onNavigateToBen}){
+function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
   if(!ben)return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
   const officer=users.find(u=>u.id===ben.assigned_to);
@@ -1178,7 +1178,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1429,7 +1429,7 @@ export default function App(){
   function renderPage(){
     const tog=()=>setSidebarOpen(o=>!o);
     const navBen=(id)=>navigateToBen(id);
-    if(sirBen)return <SIRView ben={sirBen} users={users} onBack={()=>{setSir(null);window.history.back();}} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(sirBen)return <SIRView ben={sirBen} user={user} users={users} onBack={()=>{setSir(null);window.history.back();}} onToggle={tog} onNavigateToBen={navBen}/>;
     if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>{setView(null);window.history.back();}} onAddPost={b=>setPost(b)} onSIR={b=>viewSIR(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog} onNavigateToBen={navBen}/>;
     const communitySuggestions=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
     const districtSuggestions=[...new Set(bens.map(b=>b.district).filter(Boolean))].sort();
@@ -1443,7 +1443,7 @@ export default function App(){
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page.startsWith("sir"))return <SIRView ben={null} users={users} onBack={()=>nav("dashboard")} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page.startsWith("sir"))return <SIRView ben={null} user={user} users={users} onBack={()=>nav("dashboard")} onToggle={tog} onNavigateToBen={navBen}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
   }
 
