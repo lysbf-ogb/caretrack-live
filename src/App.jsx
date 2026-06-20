@@ -249,8 +249,11 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
   </div>);
 }
 
-function Dashboard({bens,user,onNavigate,onToggle}){
-  const vis=(user.role==="Admin"||user.role==="Programme Coordinator")?bens:bens.filter(b=>b.assigned_to===user.id);
+function Dashboard({bens,user,users,onNavigate,onToggle}){
+  // Dashboard stats: Admin sees all, Coordinator sees all (for board overview), Officer sees own
+  const vis=user.role==="Programme Officer"
+    ?bens.filter(b=>b.assigned_to===user.id)
+    :bens;
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
   const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
@@ -321,18 +324,38 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
   const [yearF,setYearF]=useState("all");
   const [quarterF,setQuarterF]=useState("all");
   const [sort,setSort]=useState("name-asc");
+  const [officerF,setOfficerF]=useState(initialFilter.officer||"all");
+
+  // Officers under this coordinator (for the filter label)
+  const myOfficerIds=user.role==="Programme Coordinator"
+    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id).map(u=>u.id)
+    :null;
+
   useEffect(()=>{
     setCompF(initialFilter.comp?String(initialFilter.comp):"all");
     setStatF(!isGender&&initialFilter.stat&&initialFilter.stat!=="all"?initialFilter.stat:"all");
     setGendF(isGender?initialFilter.stat:"all");
     setOverdueF(initialFilter.overdue===true);
+    setOfficerF(initialFilter.officer||"all");
     setSearch("");
-  },[initialFilter.comp,initialFilter.stat,initialFilter.overdue]);
+  },[initialFilter.comp,initialFilter.stat,initialFilter.overdue,initialFilter.officer]);
+
   const regions=[...new Set(bens.map(b=>b.region).filter(Boolean))].sort();
   const enrollYears=[...new Set(bens.map(b=>b.enroll_date?b.enroll_date.slice(0,4):null).filter(Boolean))].sort();
   function getQuarter(dateStr){if(!dateStr)return null;const m=new Date(dateStr).getMonth()+1;if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4";}
-  const vis=((user.role==="Admin"||user.role==="Programme Coordinator")?bens:bens.filter(b=>b.assigned_to===user.id))
-    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.region===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF))
+
+  // Base visibility: coordinators see only their officers' beneficiaries
+  const baseBens=user.role==="Admin"
+    ?bens
+    :user.role==="Programme Coordinator"
+      ?bens.filter(b=>myOfficerIds.includes(b.assigned_to))
+      :bens.filter(b=>b.assigned_to===user.id);
+
+  // Viewing officer label for breadcrumb
+  const viewingOfficer=officerF!=="all"?users.find(u=>u.id===officerF):null;
+
+  const vis=baseBens
+    .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.region===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF)&&(officerF==="all"||b.assigned_to===officerF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
@@ -363,8 +386,12 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle}
     XLSX.writeFile(wb,`LYSBF_CYEP_Beneficiaries_${date}.xlsx`);
   }
 
-  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Beneficiaries" sub="View and manage all beneficiary profiles"/>
+  return(<div className="fade-in"><Topbar onToggle={onToggle} title="Beneficiaries" sub={viewingOfficer?`Viewing ${viewingOfficer.name}'s cases`:"View and manage all beneficiary profiles"}/>
     <div style={{padding:"24px 32px"}}>
+      {viewingOfficer&&<div style={{background:"#EBF5FB",border:"1px solid #AED6F1",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontSize:13,color:"#1A5276"}}>👁️ Viewing cases for <strong>{viewingOfficer.name}</strong></div>
+        <button onClick={()=>setOfficerF("all")} style={{background:"none",border:"none",color:"#1A5276",cursor:"pointer",fontSize:12,fontWeight:700,textDecoration:"underline"}}>← Back to all my officers' cases</button>
+      </div>}
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
           <div style={{fontSize:13,color:T.grey}}>{vis.length} {vis.length===1?"record":"records"} {(overdueF||enrollTag)?"(filtered)":""}</div>
@@ -920,7 +947,7 @@ function MyAccount({user,users,setUsers,onToggle}){
   </div>);
 }
 
-function MyOfficers({user,users,bens,onToggle}){
+function MyOfficers({user,users,bens,onNavigate,onToggle}){
   const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
   return(<div className="fade-in"><Topbar onToggle={onToggle} title="My Officers" sub="Programme officers under your supervision"/>
     <div style={{padding:"24px 32px"}}>
@@ -931,10 +958,11 @@ function MyOfficers({user,users,bens,onToggle}){
           const active=myBens.filter(b=>b.status==="Active").length;
           const overdue=myBens.filter(b=>{if(!b.last_follow_up)return true;const d=new Date(b.last_follow_up);const diff=(new Date()-d)/(1000*60*60*24);return diff>90;}).length;
           const totalPosts=myBens.reduce((sum,b)=>(b.posts||[]).length+sum,0);
-          return(<div key={officer.id} style={{background:"#fff",borderRadius:12,padding:"20px 22px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+          return(<div key={officer.id} className="card-hover" onClick={()=>onNavigate("ben-list",{officer:officer.id})} style={{background:"#fff",borderRadius:12,padding:"20px 22px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",cursor:"pointer",transition:"all 0.2s"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
               <div style={{width:44,height:44,borderRadius:"50%",background:aColor(officer.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:16,color:"#fff",flexShrink:0}}>{inits(officer.name)}</div>
-              <div><div style={{fontWeight:700,fontSize:15,color:T.navy}}>{officer.name}</div><div style={{fontSize:12,color:T.grey}}>{officer.email}</div></div>
+              <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:T.navy}}>{officer.name}</div><div style={{fontSize:12,color:T.grey}}>{officer.email}</div></div>
+              <div style={{fontSize:20,color:T.grey}}>→</div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:0}}>
               <div style={{background:T.off,borderRadius:8,padding:"10px 0",textAlign:"center"}}>
@@ -951,7 +979,7 @@ function MyOfficers({user,users,bens,onToggle}){
               </div>
             </div>
             <div style={{marginTop:10,fontSize:12,color:T.grey,borderTop:`1px solid ${T.greyL}`,paddingTop:10}}>
-              💬 {totalPosts} follow-up note{totalPosts!==1?"s":""} recorded
+              💬 {totalPosts} follow-up note{totalPosts!==1?"s":""} · <span style={{color:"#1A5276",fontWeight:600}}>Click to view cases →</span>
             </div>
           </div>);
         })}
@@ -1011,7 +1039,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle}){
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.5.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.5.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1222,11 +1250,11 @@ export default function App(){
     const districtSuggestions=[...new Set(bens.map(b=>b.district).filter(Boolean))].sort();
     const citySuggestions=[...new Set(bens.map(b=>b.city).filter(Boolean))].sort();
     if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog} communitySuggestions={communitySuggestions} districtSuggestions={districtSuggestions} citySuggestions={citySuggestions}/>;
-    if(page==="dashboard")return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
+    if(page==="dashboard")return <Dashboard bens={bens} user={user} users={users} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
     if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>viewProfile(b)} onEdit={b=>viewEdit(b)} onSIR={b=>viewSIR(b)} initialFilter={dashFilter} onToggle={tog}/>;
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog}/>;
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
-    if(page==="my-officers"&&user.role==="Programme Coordinator")return <MyOfficers user={user} users={users} bens={bens} onToggle={tog}/>;
+    if(page==="my-officers"&&user.role==="Programme Coordinator")return <MyOfficers user={user} users={users} bens={bens} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog}/>;
