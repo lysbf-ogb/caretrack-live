@@ -341,7 +341,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
       <div style={{padding:"14px 10px",flex:1}}>
         <NI label="Dashboard" icon="🏠" p="dashboard"/>
         <G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/><NI label="Add" icon="➕" p="ben-add" sub/></G>
-        <G label="SIR" icon="📝" open={sirOpen} setOpen={setSir}><NI label="List" icon="📋" p="sir-list" sub/><NI label="Add" icon="➕" p="sir-add" sub/><NI label="Archive" icon="🗄" p="sir-archive" sub/></G>
+        <NI label="Activity Planner" icon="📅" p="planner"/>
         <NI label="Posts" icon="💬" p="posts"/>
         <NI label="My Account" icon="👤" p="my-account"/>
         {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
@@ -1127,6 +1127,279 @@ function MyOfficers({user,users,bens,onNavigate,onToggle,onNavigateToBen}){
   </div>);
 }
 
+function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
+  const now=new Date();
+  const [year,setYear]=useState(now.getFullYear());
+  const [month,setMonth]=useState(now.getMonth());
+  const [plans,setPlans]=useState({});
+  const [comments,setComments]=useState({});
+  const [approvals,setApprovals]=useState({});
+  const [viewUserId,setViewUserId]=useState(user.id);
+  const [saving,setSaving]=useState({});
+  const [commentInput,setCommentInput]=useState({});
+  const [showCommentBox,setShowCommentBox]=useState({});
+  const [approvalNote,setApprovalNote]=useState("");
+  const [showApprovalBox,setShowApprovalBox]=useState(false);
+  const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+  // Who can be viewed
+  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
+  const allOfficers=users.filter(u=>u.role==="Programme Officer");
+  const allCoordinators=users.filter(u=>u.role==="Programme Coordinator");
+  const viewableUsers=user.role==="Admin"
+    ?[user,...allCoordinators,...allOfficers]
+    :user.role==="Programme Coordinator"
+      ?[user,...myOfficers]
+      :[user];
+  const viewUser=users.find(u=>u.id===viewUserId)||user;
+  const isOwnPlan=viewUserId===user.id;
+  const canComment=(user.role==="Admin"||user.role==="Programme Coordinator")&&!isOwnPlan;
+  const canApprove=user.role==="Programme Coordinator"&&viewUser.role==="Programme Officer"&&viewUser.coordinator_id===user.id;
+  const canAdminApprove=user.role==="Admin"&&viewUser.role==="Programme Coordinator";
+
+  // End of month reminder: officer, last 5 days of month, next month plan empty
+  const daysInCurrentMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const dayOfMonth=now.getDate();
+  const showReminder=user.role==="Programme Officer"&&isOwnPlan&&(daysInCurrentMonth-dayOfMonth)<5;
+
+  const monthKey=`${year}-${String(month+1).padStart(2,"0")}`;
+
+  useEffect(()=>{loadData();},[viewUserId,month,year]);
+
+  async function loadData(){
+    // Load plans
+    const{data:planData}=await supabase.from("activity_plans").select("*").eq("user_id",viewUserId).like("plan_date",`${year}-${String(month+1).padStart(2,"0")}-%`);
+    if(planData){
+      const map={};
+      planData.forEach(p=>{map[p.plan_date]=p;});
+      setPlans(map);
+    }
+    // Load comments
+    const{data:commentData}=await supabase.from("plan_comments").select("*").eq("target_user_id",viewUserId).like("plan_date",`${year}-${String(month+1).padStart(2,"0")}-%`);
+    if(commentData){
+      const map={};
+      commentData.forEach(c=>{
+        if(!map[c.plan_date])map[c.plan_date]=[];
+        map[c.plan_date].push(c);
+      });
+      setComments(map);
+    }
+    // Load approval
+    const{data:approvalData}=await supabase.from("plan_approvals").select("*").eq("officer_id",viewUserId).eq("month",monthKey).single();
+    if(approvalData)setApprovals(a=>({...a,[viewUserId+monthKey]:approvalData}));
+  }
+
+  async function savePlan(dateStr,text){
+    setSaving(s=>({...s,[dateStr]:true}));
+    await supabase.from("activity_plans").upsert({user_id:viewUserId,plan_date:dateStr,activity:text,updated_at:new Date().toISOString()},{onConflict:"user_id,plan_date"});
+    setPlans(p=>({...p,[dateStr]:{...p[dateStr],activity:text}}));
+    setSaving(s=>({...s,[dateStr]:false}));
+  }
+
+  async function submitComment(dateStr){
+    const text=commentInput[dateStr];
+    if(!text||!text.trim())return;
+    const{data}=await supabase.from("plan_comments").insert([{plan_date:dateStr,target_user_id:viewUserId,author_id:user.id,author_name:user.name,author_role:user.role,comment:text,created_at:new Date().toISOString()}]).select().single();
+    if(data){
+      setComments(c=>({...c,[dateStr]:[...(c[dateStr]||[]),data]}));
+      setCommentInput(i=>({...i,[dateStr]:""}));
+      setShowCommentBox(s=>({...s,[dateStr]:false}));
+      // Notify the target user
+      await createNotification(
+        viewUserId,"comment",
+        `New instruction on your plan`,
+        `${user.name} (${user.role}) added a note to your plan for ${dateStr}: "${text.slice(0,60)}${text.length>60?"...":""}"`,
+        null,null
+      );
+    }
+  }
+
+  async function setApprovalStatus(status){
+    const existing=approvals[viewUserId+monthKey];
+    if(existing){
+      await supabase.from("plan_approvals").update({status,note:approvalNote,updated_at:new Date().toISOString()}).eq("id",existing.id);
+    } else {
+      await supabase.from("plan_approvals").insert([{officer_id:viewUserId,coordinator_id:user.id,month:monthKey,status,note:approvalNote}]);
+    }
+    setApprovals(a=>({...a,[viewUserId+monthKey]:{...(existing||{}),status,note:approvalNote}}));
+    setShowApprovalBox(false);
+    setApprovalNote("");
+    // Notify officer/coordinator
+    const msg=status==="Approved"
+      ?`${user.name} approved your activity plan for ${MONTHS[month]} ${year}`
+      :`${user.name} marked your plan for ${MONTHS[month]} ${year} as "${status}"${approvalNote?": "+approvalNote:""}`;
+    await createNotification(viewUserId,"comment",`Plan ${status}: ${MONTHS[month]} ${year}`,msg,null,null);
+  }
+
+  // Build calendar grid
+  function buildCalendar(){
+    const firstDay=new Date(year,month,1);
+    const lastDay=new Date(year,month+1,0);
+    const startDow=firstDay.getDay()===0?6:firstDay.getDay()-1; // Mon=0
+    const days=[];
+    for(let i=0;i<startDow;i++){
+      const d=new Date(year,month,1-startDow+i);
+      days.push({date:d,current:false});
+    }
+    for(let i=1;i<=lastDay.getDate();i++){
+      days.push({date:new Date(year,month,i),current:true});
+    }
+    while(days.length%7!==0){
+      const d=new Date(year,month+1,days.length-lastDay.getDate()-startDow+1);
+      days.push({date:d,current:false});
+    }
+    return days;
+  }
+
+  function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+  function isToday(d){return fmtDate(d)===fmtDate(now);}
+
+  const days=buildCalendar();
+  const approval=approvals[viewUserId+monthKey];
+  const approvalColor=!approval||approval.status==="Pending"?"#888":approval.status==="Approved"?"#27AE60":"#E67E22";
+  const approvalBg=!approval||approval.status==="Pending"?"#F5F5F5":approval.status==="Approved"?"#EAFAF1":"#FEF5E7";
+
+  return(<div className="fade-in">
+    <Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Activity Planner" sub="Plan and track monthly field activities"/>
+    <div style={{padding:"16px 24px"}}>
+
+      {/* End of month reminder */}
+      {showReminder&&<div style={{background:"#EBF5FB",border:"1px solid #AED6F1",borderRadius:10,padding:"10px 16px",marginBottom:14,display:"flex",alignItems:"center",gap:10,fontSize:13,color:"#1A5276"}}>
+        <span style={{fontSize:18}}>📅</span>
+        <span>Reminder: Please fill in your activity plan for <strong>{MONTHS[month===11?0:month+1]} {month===11?year+1:year}</strong> before the month ends.</span>
+      </div>}
+
+      {/* Toolbar */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>{if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);}} style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",fontSize:14}}>←</button>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,minWidth:140,textAlign:"center"}}>{MONTHS[month]} {year}</div>
+          <button onClick={()=>{if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);}} style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",fontSize:14}}>→</button>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {/* Approval badge */}
+          {canApprove&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{background:approvalBg,color:approvalColor,padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,border:`1px solid ${approvalColor}`}}>
+              {approval?.status||"Pending"}
+            </span>
+            <button onClick={()=>setShowApprovalBox(s=>!s)} style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:T.navy}}>
+              ✓ Review Plan
+            </button>
+          </div>}
+          {/* Admin can also approve coordinator plans */}
+          {canAdminApprove&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{background:approvalBg,color:approvalColor,padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,border:`1px solid ${approvalColor}`}}>
+              {approval?.status||"Pending"}
+            </span>
+            <button onClick={()=>setShowApprovalBox(s=>!s)} style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:T.navy}}>
+              ✓ Review Plan
+            </button>
+          </div>}
+          <button onClick={()=>window.print()} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 12px",borderRadius:7,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",fontSize:12,color:T.navy}}>
+            🖨 Print
+          </button>
+        </div>
+      </div>
+
+      {/* Approval box */}
+      {showApprovalBox&&<div style={{background:"#fff",borderRadius:10,padding:"16px",marginBottom:12,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
+        <div style={{fontWeight:700,fontSize:13,color:T.navy,marginBottom:10}}>Review {viewUser.name}'s plan for {MONTHS[month]} {year}</div>
+        <textarea value={approvalNote} onChange={e=>setApprovalNote(e.target.value)} placeholder="Add a note (optional)..." spellCheck="true" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontFamily:"'Source Sans 3',sans-serif",marginBottom:10,resize:"vertical",minHeight:60}}/>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setApprovalStatus("Approved")} style={{padding:"6px 16px",borderRadius:7,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✓ Approve</button>
+          <button onClick={()=>setApprovalStatus("Needs Revision")} style={{padding:"6px 16px",borderRadius:7,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#FEF5E7",color:"#E67E22"}}>⚠ Needs Revision</button>
+          <button onClick={()=>setApprovalStatus("Pending")} style={{padding:"6px 16px",borderRadius:7,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#F5F5F5",color:"#888"}}>Reset to Pending</button>
+          <button onClick={()=>setShowApprovalBox(false)} style={{padding:"6px 16px",borderRadius:7,border:`1px solid ${T.greyM}`,cursor:"pointer",fontSize:12,background:"#fff",color:T.grey}}>Cancel</button>
+        </div>
+      </div>}
+
+      {/* Officer tabs for coordinator/admin */}
+      {viewableUsers.length>1&&<div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:11,color:T.grey,marginRight:4}}>Viewing:</span>
+        {viewableUsers.map(u=>(
+          <button key={u.id} onClick={()=>setViewUserId(u.id)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${viewUserId===u.id?"#1E6B3C":T.greyM}`,background:viewUserId===u.id?"#1E6B3C":"#fff",color:viewUserId===u.id?"#fff":T.navy,fontSize:11,cursor:"pointer",fontWeight:viewUserId===u.id?700:400}}>
+            {u.id===user.id?"My plan":u.name}
+            {u.role==="Programme Coordinator"&&u.id!==user.id&&<span style={{fontSize:9,marginLeft:4,opacity:0.8}}>(Coord)</span>}
+          </button>
+        ))}
+      </div>}
+
+      {/* Plan status for officer viewing own plan */}
+      {isOwnPlan&&user.role==="Programme Officer"&&<div style={{marginBottom:10}}>
+        {approval&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:approvalBg,border:`1px solid ${approvalColor}`,borderRadius:20,padding:"3px 12px",fontSize:11,color:approvalColor,fontWeight:700}}>
+          {approval.status==="Approved"?"✓":"⚠"} Plan {approval.status}
+          {approval.note&&<span style={{fontWeight:400,color:T.grey}}>— {approval.note}</span>}
+        </div>}
+      </div>}
+
+      {/* Calendar grid */}
+      <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        {/* Day headers */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:T.off,borderBottom:`1px solid ${T.greyL}`}}>
+          {DAYS.map(d=><div key={d} style={{padding:"8px 0",textAlign:"center",fontSize:10,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{d}</div>)}
+        </div>
+        {/* Weeks */}
+        {Array.from({length:days.length/7},(_,wi)=>(
+          <div key={wi} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:wi<days.length/7-1?`1px solid ${T.greyL}`:"none"}}>
+            {days.slice(wi*7,wi*7+7).map((day,di)=>{
+              const dateStr=fmtDate(day.date);
+              const plan=plans[dateStr];
+              const dayComments=comments[dateStr]||[];
+              const today=isToday(day.date);
+              const showCB=showCommentBox[dateStr];
+              return(<div key={di} style={{borderRight:di<6?`1px solid ${T.greyL}`:"none",padding:"6px 7px",minHeight:90,background:!day.current?"#FAFAFA":today?"#F0FBF4":"#fff",opacity:!day.current?0.5:1,position:"relative"}}>
+                <div style={{fontSize:11,fontWeight:today?700:400,color:today?"#1E6B3C":T.grey,marginBottom:3}}>{day.date.getDate()}</div>
+                {/* Plan text - editable if own plan */}
+                {isOwnPlan
+                  ?<textarea
+                      defaultValue={plan?.activity||""}
+                      onBlur={e=>e.target.value!==((plan?.activity)||"")&&savePlan(dateStr,e.target.value)}
+                      placeholder={day.current?"Add plan...":""}
+                      spellCheck="true"
+                      disabled={!day.current}
+                      style={{width:"100%",border:"none",background:"transparent",fontSize:10,color:T.navy,resize:"none",fontFamily:"'Source Sans 3',sans-serif",lineHeight:1.45,outline:"none",minHeight:42,cursor:day.current?"text":"default"}}
+                    />
+                  :<div style={{fontSize:10,color:T.navy,lineHeight:1.45,marginBottom:3,minHeight:28}}>{plan?.activity||<span style={{color:T.greyM,fontStyle:"italic"}}>No plan</span>}</div>
+                }
+                {/* Coordinator/Admin comments */}
+                {dayComments.map((c,ci)=>(
+                  <div key={ci} style={{marginTop:3,padding:"2px 5px",background:"#EBF5FB",borderRadius:4,borderLeft:"2px solid #2980B9",fontSize:9,color:"#1A5276",lineHeight:1.4}}>
+                    <strong>{c.author_name.split(" ")[0]}:</strong> {c.comment}
+                  </div>
+                ))}
+                {/* Add comment button for coordinators/admins */}
+                {canComment&&day.current&&<div style={{marginTop:3}}>
+                  {!showCB
+                    ?<button onClick={()=>setShowCommentBox(s=>({...s,[dateStr]:true}))} style={{fontSize:9,color:"#2980B9",background:"none",border:"none",cursor:"pointer",padding:0}}>+ Add note</button>
+                    :<div>
+                      <input value={commentInput[dateStr]||""} onChange={e=>setCommentInput(i=>({...i,[dateStr]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(dateStr)} placeholder="Type instruction..." style={{width:"100%",fontSize:9,border:`1px solid ${T.greyM}`,borderRadius:4,padding:"2px 4px",fontFamily:"'Source Sans 3',sans-serif"}}/>
+                      <div style={{display:"flex",gap:4,marginTop:2}}>
+                        <button onClick={()=>submitComment(dateStr)} style={{fontSize:9,padding:"1px 6px",borderRadius:3,border:"none",background:"#2980B9",color:"#fff",cursor:"pointer"}}>Send</button>
+                        <button onClick={()=>setShowCommentBox(s=>({...s,[dateStr]:false}))} style={{fontSize:9,padding:"1px 6px",borderRadius:3,border:`1px solid ${T.greyM}`,background:"#fff",cursor:"pointer",color:T.grey}}>✕</button>
+                      </div>
+                    </div>
+                  }
+                </div>}
+                {saving[dateStr]&&<div style={{position:"absolute",top:2,right:4,fontSize:8,color:T.grey}}>saving…</div>}
+              </div>);
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Print styles */}
+    <style>{`
+      @media print {
+        @page { size: A4 landscape; margin: 12mm; }
+        .no-print { display: none !important; }
+        body { -webkit-print-color-adjust: exact; }
+      }
+    `}</style>
+  </div>);
+}
+
 function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToBen}){
   const fileRef=useRef();
   const [logoMsg,setLogoMsg]=useState("");const [logoBusy,setLogoBusy]=useState(false);
@@ -1178,7 +1451,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1443,7 +1716,7 @@ export default function App(){
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page.startsWith("sir"))return <SIRView ben={null} user={user} users={users} onBack={()=>nav("dashboard")} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="planner")return <ActivityPlanner user={user} users={users} onToggle={tog} onNavigateToBen={navBen}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
   }
 
