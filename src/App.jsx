@@ -1474,7 +1474,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1685,10 +1685,14 @@ export default function App(){
 
   async function addPost(ben,text,author,visitDate,visitType){
     try{
-      const{data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:visitDate||today(),visit_date:visitDate||today(),visit_type:visitType||""}]).select().single();
+      const followUpDate=visitDate||today();
+      const{data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:followUpDate,visit_date:followUpDate,visit_type:visitType||""}]).select().single();
       if(data){
-        setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:data.date}:b));
-        if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:data.date}));
+        // Write last_follow_up back to beneficiaries table in Supabase
+        await supabase.from("beneficiaries").update({last_follow_up:followUpDate}).eq("id",ben.id);
+        // Update local state
+        setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:followUpDate}:b));
+        if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:followUpDate}));
         // Notify the coordinator of the assigned officer
         const officer=users.find(u=>u.id===ben.assigned_to);
         const coordId=officer?.coordinator_id||ben.coordinator_id;
