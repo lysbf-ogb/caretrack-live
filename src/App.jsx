@@ -154,7 +154,7 @@ const FI=({label,value,onChange,type="text",options,full,readOnly,placeholder})=
   <div style={{display:"flex",flexDirection:"column",gap:5,...(full?{gridColumn:"1/-1"}:{})}}>
     <Lbl c={label}/>
     {options?<select value={value||""} onChange={e=>onChange&&onChange(e.target.value)} disabled={readOnly} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy}}>{options.map(o=><option key={o.value||o} value={o.value||o}>{o.label||o}</option>)}</select>
-    :type==="textarea"?<textarea spellCheck={true} value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy,minHeight:80,resize:"vertical"}}/>
+    :type==="textarea"?<textarea spellCheck="true" lang="en" value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy,minHeight:80,resize:"vertical"}}/>
     :<input type={type} value={value||""} onChange={e=>onChange&&onChange(e.target.value)} readOnly={readOnly} placeholder={placeholder||""} style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",background:readOnly?T.off:"#fff",color:T.navy}}/>}
   </div>
 );
@@ -618,7 +618,7 @@ function BenMgmt({bens,setBens,onToggle,onNavigateToBen}){
   </div>);
 }
 
-function FollowUpsTab({ben,user,onAddPost}){
+function FollowUpsTab({ben,user,users,onAddPost}){
   const [comments,setComments]=useState({});
   const [newComment,setNewComment]=useState({});
   const [loading,setLoading]=useState({});
@@ -629,7 +629,17 @@ function FollowUpsTab({ben,user,onAddPost}){
       if(data)setComments(c=>({...c,[p.id]:data}));
     });
   },[ben.posts]);
-  async function submitComment(postId,post){
+
+  // Reliably find coordinator: first from officer's coordinator_id, fallback to ben.coordinator_id
+  function getCoordinatorId(){
+    if(ben.assigned_to&&users){
+      const officer=users.find(u=>u.id===ben.assigned_to);
+      if(officer?.coordinator_id)return officer.coordinator_id;
+    }
+    return ben.coordinator_id||null;
+  }
+
+  async function submitComment(postId){
     const text=newComment[postId];if(!text||!text.trim())return;
     setLoading(l=>({...l,[postId]:true}));
     const{data}=await supabase.from("comments").insert([{post_id:postId,author:user.name,author_role:user.role,text,created_at:new Date().toISOString()}]).select().single();
@@ -637,6 +647,7 @@ function FollowUpsTab({ben,user,onAddPost}){
       setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));
       setNewComment(n=>({...n,[postId]:""}));
       const preview=`"${text.slice(0,60)}${text.length>60?"...":""}"`;
+      const coordId=getCoordinatorId();
       if(user.role==="Programme Coordinator"||user.role==="Admin"){
         // Coordinator/Admin commented — notify the assigned officer
         if(ben.assigned_to&&ben.assigned_to!==user.id){
@@ -649,7 +660,6 @@ function FollowUpsTab({ben,user,onAddPost}){
         }
       } else if(user.role==="Programme Officer"){
         // Officer replied — notify their coordinator
-        const coordId=ben.coordinator_id;
         if(coordId&&coordId!==user.id){
           await createNotification(
             coordId,"comment",
@@ -675,8 +685,8 @@ function FollowUpsTab({ben,user,onAddPost}){
         <div style={{flex:1}}><div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div></div>
       </div>))}
       <div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
-        <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id,p)} placeholder="Write a comment or reply..." spellCheck={true} style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
-        <button onClick={()=>submitComment(p.id,p)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
+        <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)} placeholder="Write a comment or reply..." spellCheck="true" style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+        <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
       </div>
     </div>))}
   </div>);
@@ -791,7 +801,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
             {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={localBen.family}/></div>}
             {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",localBen.occupation],["Employment Status",localBen.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={localBen.disability}/></div>}
-            {tab==="followups"&&<FollowUpsTab ben={localBen} user={user} onAddPost={onAddPost}/>}
+            {tab==="followups"&&<FollowUpsTab ben={localBen} user={user} users={users} onAddPost={onAddPost}/>}
             {tab==="documents"&&<div style={{textAlign:"center",padding:"36px 0"}}><div style={{fontSize:44,marginBottom:12}}>📁</div><div style={{color:T.grey,fontSize:14,marginBottom:16}}>No documents uploaded yet.</div><Btn variant="primary">+ Upload Document</Btn></div>}
           </div>
         </div>
@@ -1168,7 +1178,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1227,7 +1237,7 @@ function PostModal({ben,user,onSave,onClose}){
       </div>
       <div style={{height:1,background:T.greyM,margin:"16px 0"}}/>
       <Lbl c="Follow-Up Notes *"/>
-      <textarea spellCheck={true} value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
+      <textarea spellCheck="true" lang="en" value={text} onChange={e=>setText(e.target.value)} placeholder="Describe the visit, observations, progress made, challenges noted, and next steps…" style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,minHeight:110,resize:"vertical",marginBottom:18,marginTop:6}}/>
       {!canSave&&<div style={{fontSize:12,color:"#E67E22",marginBottom:12}}>⚠️ Please select at least one visit type and add a note before saving.</div>}
       <div style={{display:"flex",gap:10}}>
         <Btn variant="primary" onClick={save} style={{opacity:busy?0.6:1}}>{busy?"Saving...":"Save Follow-Up"}</Btn>
