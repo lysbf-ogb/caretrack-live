@@ -98,7 +98,7 @@ const CSS=`
   .tab-btn:hover{background:#fff!important;color:#1A365D!important;}
   .action-btn:hover{filter:brightness(0.90);}
   .upload-zone-hover:hover{border-color:#27AE60!important;background:#EAFAF1!important;}
-  @media print{.no-print{display:none!important;}body{background:white;}.print-main{margin-left:0!important;}}
+  @media print{.no-print{display:none!important;}body{background:white;}.print-main{margin-left:0!important;}@page{size:A4 landscape;margin:12mm;}}
   input:focus,select:focus,textarea:focus{border-color:#27AE60!important;box-shadow:0 0 0 3px rgba(39,174,96,0.15);outline:none;}
   .fade-in{animation:fadeIn 0.3s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
@@ -1409,15 +1409,6 @@ function ActivityPlanner({user,users,onToggle,onNavigateToBen}){
         {Object.keys(draftPlans).length>0&&!saving.all&&<span style={{fontSize:12,color:"#E67E22",fontWeight:600}}>● Unsaved changes</span>}
         {saveMsg&&<span style={{fontSize:12,color:saveMsg.includes("✅")?"#1D8348":saveMsg.includes("ℹ️")?"#1A5276":"#C0392B",fontWeight:600}}>{saveMsg}</span>}
       </div>}
-
-      <style>{`
-        @media print {
-          @page { size: A4 landscape; margin: 12mm; }
-          .no-print { display: none !important; }
-          body { -webkit-print-color-adjust: exact; }
-        }
-      `}</style>
-      </div>
     </div>
   </div>);
 }
