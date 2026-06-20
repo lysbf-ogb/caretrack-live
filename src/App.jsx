@@ -1474,7 +1474,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.6.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1730,7 +1730,7 @@ export default function App(){
 
   function renderPage(){
     const tog=()=>setSidebarOpen(o=>!o);
-    const navBen=(id)=>navigateToBen(id);
+    const navBen=(id,extra)=>navigateToBen(id,extra);
     if(sirBen)return <SIRView ben={sirBen} user={user} users={users} onBack={()=>{setSir(null);window.history.back();}} onToggle={tog} onNavigateToBen={navBen}/>;
     if(viewBen)return <Profile ben={viewBen} user={user} users={users} onBack={()=>{setView(null);window.history.back();}} onAddPost={b=>setPost(b)} onSIR={b=>viewSIR(b)} onPhotoUpdate={handlePhotoUpdate} onToggle={tog} onNavigateToBen={navBen}/>;
     const communitySuggestions=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
