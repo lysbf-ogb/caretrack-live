@@ -351,12 +351,14 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
       <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>LYSBF · CYEP</div></div><button onClick={onToggle} aria-label="Collapse sidebar" style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.12)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"rgba(255,255,255,0.7)",fontSize:13}}>←</button></div></div>
       <div style={{padding:"14px 10px",flex:1}}>
         <NI label="Dashboard" icon="🏠" p="dashboard"/>
-        <G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/><NI label="Add" icon="➕" p="ben-add" sub/></G>
+        {user.role!=="Management"&&<G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/>{user.role!=="Management"&&<NI label="Add" icon="➕" p="ben-add" sub/>}</G>}
+        {user.role==="Management"&&<NI label="Beneficiaries" icon="👨‍👩‍👧‍👦" p="ben-list"/>}
         <NI label="Activity Planner" icon="📅" p="planner"/>
-        <NI label="Posts" icon="💬" p="posts"/>
+        {user.role!=="Management"&&<NI label="Posts" icon="💬" p="posts"/>}
         <NI label="My Account" icon="👤" p="my-account"/>
         {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Settings" icon="🔧" p="settings"/></>}
-      {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Officers" icon="👥" p="my-officers"/></>}
+        {user.role==="Management"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Management</div><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="Staff Directory" icon="👥" p="staff-directory"/><NI label="Settings" icon="🔧" p="settings"/></>}
+        {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Officers" icon="👥" p="my-officers"/></>}
       </div>
       <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
     </div>
@@ -545,7 +547,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
                 <button className="action-btn" onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
-                {(user.role==="Admin"||user.role==="Programme Coordinator"||b.assigned_to===user.id)&&<button className="action-btn" onClick={()=>onEdit(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✏️ Edit</button>}
+                {(user.role==="Admin"||user.role==="Programme Coordinator"||b.assigned_to===user.id)&&user.role!=="Management"&&<button className="action-btn" onClick={()=>onEdit(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✏️ Edit</button>}
                 <button className="action-btn" onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
               </div></td>
             </tr>);})}
@@ -687,7 +689,7 @@ function FollowUpsTab({ben,user,users,onAddPost}){
     setLoading(l=>({...l,[postId]:false}));
   }
   return(<div>
-    {(user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id)&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
+    {(user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id)&&user.role!=="Management"&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
     {(!ben.posts||ben.posts.length===0)&&<div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
     {(ben.posts||[]).slice().reverse().map(p=>(<div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
       <div style={{display:"flex",gap:10,marginBottom:12}}>
@@ -710,7 +712,7 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
   const fileRef=useRef();
   const [uploading,setUploading]=useState(false);
   const [msg,setMsg]=useState("");
-  const canEdit=user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id;
+  const canEdit=(user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id)&&user.role!=="Management";
   if(!canEdit)return null;
   async function handleFile(e){
     const file=e.target.files[0];
@@ -1416,12 +1418,14 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
   const allCoordinators=users.filter(u=>u.role==="Programme Coordinator");
   const viewableUsers=user.role==="Admin"
     ?[user,...allCoordinators,...allOfficers]
-    :user.role==="Programme Coordinator"
-      ?[user,...myOfficers]
-      :[user];
+    :user.role==="Management"
+      ?[...users.filter(u=>u.role==="Admin"&&u.id!==user.id),...users.filter(u=>u.role==="Programme Coordinator"),...users.filter(u=>u.role==="Programme Officer"&&u.status!=="Inactive"),user]
+      :user.role==="Programme Coordinator"
+        ?[user,...myOfficers]
+        :[user];
   const viewUser=users.find(u=>u.id===viewUserId)||user;
   const isOwnPlan=viewUserId===user.id;
-  const canComment=(user.role==="Admin"||user.role==="Programme Coordinator")&&!isOwnPlan;
+  const canComment=(user.role==="Admin"||user.role==="Programme Coordinator")&&!isOwnPlan&&user.role!=="Management";
   const canApprove=user.role==="Programme Coordinator"&&viewUser.role==="Programme Officer"&&viewUser.coordinator_id===user.id;
   const canAdminApprove=user.role==="Admin"&&viewUser.role==="Programme Coordinator";
 
@@ -1678,6 +1682,155 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
   </div>);
 }
 
+function OrgStructure({user,users,bens,onToggle,onNavigateToBen}){
+  const activeUsers=users.filter(u=>u.status!=="Inactive");
+  const admins=activeUsers.filter(u=>u.role==="Admin");
+  const management=activeUsers.filter(u=>u.role==="Management");
+  const coordinators=activeUsers.filter(u=>u.role==="Programme Coordinator");
+  const officers=activeUsers.filter(u=>u.role==="Programme Officer");
+
+  function StatBadge({label,value,color}){
+    return(<div style={{background:color+"22",borderRadius:6,padding:"3px 10px",fontSize:10,color:color,fontWeight:700}}>{value} {label}</div>);
+  }
+
+  function PersonCard({u,compact=false}){
+    const myBens=bens.filter(b=>b.assigned_to===u.id);
+    const active=myBens.filter(b=>b.status==="Active").length;
+    return(<div style={{background:"#fff",borderRadius:10,padding:compact?"10px 14px":"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{width:compact?32:40,height:compact?32:40,borderRadius:"50%",background:aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:compact?11:13,color:"#fff",flexShrink:0}}>{inits(u.name)}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:700,fontSize:compact?12:13,color:T.navy,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.name}</div>
+        <div style={{fontSize:10,color:T.grey,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{u.email}</div>
+        {u.role==="Programme Officer"&&<div style={{fontSize:10,color:T.slate,marginTop:2}}>{active} active case{active!==1?"s":""}</div>}
+      </div>
+    </div>);
+  }
+
+  const SectionTitle=({label,color,count})=>(
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,marginTop:24}}>
+      <div style={{height:2,width:24,background:color,borderRadius:2}}/>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.navy}}>{label}</div>
+      <div style={{background:color+"22",color:color,padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{count}</div>
+      <div style={{flex:1,height:1,background:T.greyL}}/>
+    </div>
+  );
+
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Org Structure" sub="Organisation hierarchy — read only"/>
+    <div style={{padding:"24px 32px"}}>
+      {/* Admin row */}
+      {admins.length>0&&<><SectionTitle label="Administrators" color="#C0392B" count={admins.length}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10,marginBottom:8}}>
+        {admins.map(u=><PersonCard key={u.id} u={u}/>)}
+      </div></>}
+
+      {/* Management row */}
+      {management.length>0&&<><SectionTitle label="Management" color="#9A7D0A" count={management.length}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10,marginBottom:8}}>
+        {management.map(u=><PersonCard key={u.id} u={u}/>)}
+      </div></>}
+
+      {/* Coordinators and their officers */}
+      {coordinators.length>0&&<><SectionTitle label="Programme Coordinators & Their Officers" color="#6C3483" count={coordinators.length+" coordinators · "+officers.length+" officers"}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:16}}>
+        {coordinators.map(coord=>{
+          const myOfficers=officers.filter(o=>o.coordinator_id===coord.id);
+          const totalCases=myOfficers.reduce((sum,o)=>sum+bens.filter(b=>b.assigned_to===o.id).length,0);
+          const activeCases=myOfficers.reduce((sum,o)=>sum+bens.filter(b=>b.assigned_to===o.id&&b.status==="Active").length,0);
+          return(<div key={coord.id} style={{background:T.off,borderRadius:12,padding:"16px",border:`1px solid ${T.greyL}`}}>
+            {/* Coordinator card */}
+            <div style={{background:"#F5EEF8",borderRadius:10,padding:"12px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:42,height:42,borderRadius:"50%",background:aColor(coord.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,color:"#fff",flexShrink:0}}>{inits(coord.name)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:T.navy}}>{coord.name}</div>
+                <div style={{fontSize:10,color:"#6C3483",fontWeight:700}}>Programme Coordinator</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:18,fontWeight:800,color:T.navy,lineHeight:1}}>{totalCases}</div>
+                <div style={{fontSize:9,color:T.grey,textTransform:"uppercase",letterSpacing:0.5}}>Total Cases</div>
+              </div>
+            </div>
+            {/* Officers under this coordinator */}
+            {myOfficers.length===0&&<div style={{fontSize:12,color:T.grey,textAlign:"center",padding:"8px 0"}}>No officers assigned</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {myOfficers.map(o=>{
+                const oBens=bens.filter(b=>b.assigned_to===o.id);
+                const oActive=oBens.filter(b=>b.status==="Active").length;
+                return(<div key={o.id} style={{background:"#fff",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8,borderLeft:"3px solid #27AE60"}}>
+                  <div style={{width:28,height:28,borderRadius:"50%",background:aColor(o.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:10,color:"#fff",flexShrink:0}}>{inits(o.name)}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:12,color:T.navy,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{o.name}</div>
+                    <div style={{fontSize:10,color:T.grey}}>{oBens.length} cases · {oActive} active</div>
+                  </div>
+                </div>);
+              })}
+            </div>
+          </div>);
+        })}
+      </div></>}
+
+      {/* Unassigned officers */}
+      {officers.filter(o=>!o.coordinator_id).length>0&&<>
+        <SectionTitle label="Unassigned Officers" color="#E67E22" count={officers.filter(o=>!o.coordinator_id).length}/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+          {officers.filter(o=>!o.coordinator_id).map(u=><PersonCard key={u.id} u={u}/>)}
+        </div>
+      </>}
+    </div>
+  </div>);
+}
+
+function StaffDirectory({user,users,bens,onToggle,onNavigateToBen}){
+  const [roleF,setRoleF]=useState("All");
+  const [statusF,setStatusF]=useState("Active");
+  const roles=["All","Admin","Management","Programme Coordinator","Programme Officer"];
+  const filtered=users
+    .filter(u=>roleF==="All"||u.role===roleF)
+    .filter(u=>statusF==="All"||(statusF==="Active"?u.status!=="Inactive":u.status==="Inactive"))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+
+  const roleColor=(role)=>{
+    if(role==="Admin")return{bg:"#FDEDEC",color:"#C0392B"};
+    if(role==="Management")return{bg:"#FEF9E7",color:"#9A7D0A"};
+    if(role==="Programme Coordinator")return{bg:"#F5EEF8",color:"#6C3483"};
+    return{bg:"#EBF5FB",color:"#1A5276"};
+  };
+
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Staff Directory" sub="View all staff — read only"/>
+    <div style={{padding:"24px 32px"}}>
+      {/* Filters */}
+      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:12,color:T.grey,fontWeight:700}}>Filter by role:</span>
+        {roles.map(r=><button key={r} onClick={()=>setRoleF(r)} style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${roleF===r?"#27AE60":T.greyM}`,background:roleF===r?"#27AE60":"#fff",color:roleF===r?"#fff":T.navy,fontSize:12,cursor:"pointer",fontWeight:roleF===r?700:400}}>{r}</button>)}
+        <div style={{width:1,height:24,background:T.greyM,margin:"0 4px"}}/>
+        <span style={{fontSize:12,color:T.grey,fontWeight:700}}>Status:</span>
+        {["Active","Inactive","All"].map(s=><button key={s} onClick={()=>setStatusF(s)} style={{padding:"5px 14px",borderRadius:20,border:`1px solid ${statusF===s?"#27AE60":T.greyM}`,background:statusF===s?"#27AE60":"#fff",color:statusF===s?"#fff":T.navy,fontSize:12,cursor:"pointer",fontWeight:statusF===s?700:400}}>{s}</button>)}
+      </div>
+      <div style={{fontSize:12,color:T.grey,marginBottom:14}}>{filtered.length} staff member{filtered.length!==1?"s":""}</div>
+      {/* Table */}
+      <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Staff Member","Email","Role","Status","Coordinator"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <tbody>{filtered.map((u,i)=>{
+            const rc=roleColor(u.role);
+            const coord=u.coordinator_id?users.find(x=>x.id===u.coordinator_id):null;
+            const inactive=u.status==="Inactive";
+            return(<tr key={u.id} style={{background:inactive?"#FAFAFA":i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,opacity:inactive?0.7:1}}>
+              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:34,height:34,borderRadius:"50%",background:inactive?"#ccc":aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(u.name)}</div>
+                <span style={{fontWeight:700,fontSize:13,color:inactive?T.grey:T.navy}}>{u.name}</span>
+              </div></td>
+              <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
+              <td style={{padding:"13px 16px"}}><span style={{background:rc.bg,color:rc.color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
+              <td style={{padding:"13px 16px"}}><span style={{background:inactive?"#FDEDEC":"#EAFAF1",color:inactive?"#C0392B":"#1D8348",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{inactive?"Inactive":"Active"}</span></td>
+              <td style={{padding:"13px 16px",fontSize:12,color:T.grey}}>{coord?coord.name:"—"}</td>
+            </tr>);
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>);
+}
+
 function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToBen}){
   const fileRef=useRef();
   const [logoMsg,setLogoMsg]=useState("");const [logoBusy,setLogoBusy]=useState(false);
@@ -1707,16 +1860,17 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
     setLogoBusy(false);
   }
 
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Settings" sub="App configuration — Admin only"/>
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Settings" sub={user.role==="Management"?"Organisation information — view only":"App configuration — Admin only"}/>
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
         {logoMsg&&<div style={{background:logoMsg.includes("✅")?"#EAFAF1":"#FDEDEC",color:logoMsg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"9px 13px",fontSize:12,marginBottom:12}}>{logoMsg}</div>}
-        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",cursor:"pointer",background:T.off,marginBottom:14}} onClick={()=>!logoBusy&&fileRef.current.click()}>
-          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>{logoBusy?"Uploading...":"Click to upload your logo"}</div></div>}
+        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",background:T.off,marginBottom:14,cursor:user.role==="Management"?"default":"pointer"}} onClick={()=>user.role!=="Management"&&!logoBusy&&fileRef.current.click()}>
+          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>{logoBusy?"Uploading...":user.role==="Management"?"No logo uploaded yet":"Click to upload your logo"}</div></div>}
           <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogo}/>
         </div>
-        <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>
+        {user.role!=="Management"&&<div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>}
+        {user.role==="Management"&&<div style={{fontSize:11,color:T.grey,fontStyle:"italic"}}>Logo upload is managed by the Administrator.</div>}
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
@@ -1729,7 +1883,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1995,7 +2149,7 @@ export default function App(){
     const communitySuggestions=[...new Set(bens.map(b=>b.community).filter(Boolean))].sort();
     const districtSuggestions=[...new Set(bens.map(b=>b.district).filter(Boolean))].sort();
     const citySuggestions=[...new Set(bens.map(b=>b.city).filter(Boolean))].sort();
-    if(editBen||page==="ben-add")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog} communitySuggestions={communitySuggestions} districtSuggestions={districtSuggestions} citySuggestions={citySuggestions}/>;
+    if((editBen||page==="ben-add")&&user.role!=="Management")return <BenForm user={user} edit={editBen} users={users} onSave={saveBen} onCancel={()=>{setEdit(null);nav("ben-list");}} onToggle={tog} communitySuggestions={communitySuggestions} districtSuggestions={districtSuggestions} citySuggestions={citySuggestions}/>;
     if(page==="dashboard")return <Dashboard bens={bens} user={user} users={users} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-list")return <BenList bens={bens} user={user} users={users} onView={b=>viewProfile(b)} onEdit={b=>viewEdit(b)} onSIR={b=>viewSIR(b)} initialFilter={dashFilter} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
@@ -2003,7 +2157,9 @@ export default function App(){
     if(page==="my-officers"&&user.role==="Programme Coordinator")return <MyOfficers user={user} users={users} bens={bens} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} user={user} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="settings"&&(user.role==="Admin"||user.role==="Management"))return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="org-structure"&&user.role==="Management")return <OrgStructure user={user} users={users} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="staff-directory"&&user.role==="Management")return <StaffDirectory user={user} users={users} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="planner")return <ActivityPlanner user={user} users={users} initialTarget={plannerTarget} onClearTarget={()=>setPlannerTarget(null)} onToggle={tog} onNavigateToBen={navBen}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
   }
