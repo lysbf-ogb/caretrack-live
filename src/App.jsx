@@ -43,6 +43,11 @@ async function loginUser(email,password){
     if(authError||!authData.user)return null;
     const{data:profile,error:profileError}=await supabase.from("app_users").select("*").eq("auth_id",authData.user.id).single();
     if(profileError||!profile)return null;
+    // Block inactive users from logging in
+    if(profile.status==="Inactive"){
+      await supabase.auth.signOut();
+      return{inactive:true};
+    }
     return{...profile,email:email.toLowerCase()};
   }catch(e){return null;}
 }
@@ -168,6 +173,9 @@ function Logo({size=40,color="#fff",url=null}){
 async function createNotification(userId,type,title,message,beneficiaryId,postId){
   if(!userId)return;
   try{
+    // Check user is active before sending notification
+    const{data:targetUser}=await supabase.from("app_users").select("status").eq("id",userId).single();
+    if(targetUser?.status==="Inactive")return;
     await supabase.from("notifications").insert([{
       user_id:userId,type,title,message,
       beneficiary_id:beneficiaryId||null,
@@ -290,7 +298,8 @@ function Login({onLogin,users,logoUrl}){
     if(!email||!pass){setErr("Please enter your email and password.");return;}
     setBusy(true);setErr("");
     const u=await loginUser(email,pass);
-    if(u)onLogin(u);else setErr("Invalid email or password.");
+    if(u&&u.inactive)setErr("Your account has been deactivated. Please contact your administrator.");
+    else if(u)onLogin(u);else setErr("Invalid email or password.");
     setBusy(false);
   }
   return(<div style={{minHeight:"100vh",background:`linear-gradient(160deg,#1A252F 0%,#27AE60 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -436,7 +445,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
 
   // Officers under this coordinator (for the filter label)
   const myOfficerIds=user.role==="Programme Coordinator"
-    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id).map(u=>u.id)
+    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive").map(u=>u.id)
     :null;
 
   useEffect(()=>{
@@ -1040,8 +1049,8 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,commu
   function handleDob(dob){const age=dob?Math.floor((new Date()-new Date(dob))/(365.25*24*60*60*1000)):null;setF(p=>({...p,dob,age:age&&age>0?String(age):p.age}));}
   // Officers available for assignment depending on role
   const myOfficers=user.role==="Programme Coordinator"
-    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id)
-    :users.filter(u=>u.role==="Programme Officer");
+    ?users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive")
+    :users.filter(u=>u.role==="Programme Officer"&&u.status!=="Inactive");
   const canAssign=user.role==="Admin"||user.role==="Programme Coordinator";
   return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title={edit?"Edit Beneficiary":"Register New Beneficiary"} sub="Fill in all required fields"/>
     <div style={{padding:"24px 32px"}}><Btn variant="secondary" onClick={onCancel} style={{marginBottom:20}}>← Cancel</Btn>
@@ -1115,24 +1124,30 @@ function PostsPage({bens,user,onToggle,onNavigateToBen}){
   </div>);
 }
 
-function UserMgmt({users,setUsers,user,onToggle,onNavigateToBen}){
+function UserMgmt({users,setUsers,user,bens,onToggle,onNavigateToBen}){
   const [showAdd,setShowAdd]=useState(false);const [editUser,setEditUser]=useState(null);const [changePwUser,setChangePwUser]=useState(null);
   const [form,setForm]=useState({name:"",email:"",password:"",role:"Programme Officer",coordinator_id:""});
-  const [msg,setMsg]=useState("");
+  const [msg,setMsg]=useState("");const [deleteConfirm,setDeleteConfirm]=useState(null);const [deleteText,setDeleteText]=useState("");
   const s=(k,v)=>setForm(p=>({...p,[k]:v}));
-  const coordinators=users.filter(u=>u.role==="Programme Coordinator");
+  const activeUsers=users.filter(u=>u.status!=="Inactive");
+  const inactiveUsers=users.filter(u=>u.status==="Inactive");
+  const coordinators=activeUsers.filter(u=>u.role==="Programme Coordinator"&&u.status!=="Inactive");
+  const adminCount=activeUsers.filter(u=>u.role==="Admin").length;
+
   const roleColor=(role)=>{
     if(role==="Admin")return{bg:"#FDEDEC",color:"#C0392B"};
+    if(role==="Management")return{bg:"#FEF9E7",color:"#9A7D0A"};
     if(role==="Programme Coordinator")return{bg:"#F5EEF8",color:"#6C3483"};
     return{bg:"#EBF5FB",color:"#1A5276"};
   };
+
   async function addUser(){
     if(!form.name||!form.email||!form.password){setMsg("Please fill all fields.");return;}
     if(users.find(u=>u.email===form.email)){setMsg("Email already exists.");return;}
     if(form.password.length<6){setMsg("Password must be at least 6 characters.");return;}
-    const nu={id:`user-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name),coordinator_id:form.role==="Programme Officer"?form.coordinator_id||null:null};
+    const nu={id:`user-${Date.now()}`,name:form.name,email:form.email.toLowerCase(),password:form.password,role:form.role,avatar:inits(form.name),coordinator_id:form.role==="Programme Officer"?form.coordinator_id||null:null,status:"Active"};
     const ok=await saveAppUser(nu);
-    if(!ok){setMsg("❌ Error creating user. This email may already be registered. Please use a different email.");return;}
+    if(!ok){setMsg("❌ Error creating user. This email may already be registered.");return;}
     const{data:newProfile}=await supabase.from("app_users").select("*").eq("email",form.email.toLowerCase()).single();
     if(newProfile&&nu.coordinator_id){await supabase.from("app_users").update({coordinator_id:nu.coordinator_id}).eq("id",newProfile.id);}
     setUsers(u=>[...u,newProfile||nu]);
@@ -1140,6 +1155,7 @@ function UserMgmt({users,setUsers,user,onToggle,onNavigateToBen}){
     setForm({name:"",email:"",password:"",role:"Programme Officer",coordinator_id:""});
     setShowAdd(false);
   }
+
   async function saveEdit(){
     if(!editUser.name||!editUser.email){setMsg("Name and email required.");return;}
     const updates={...editUser,name:editUser.name,email:editUser.email,avatar:inits(editUser.name),coordinator_id:editUser.coordinator_id||null};
@@ -1148,28 +1164,111 @@ function UserMgmt({users,setUsers,user,onToggle,onNavigateToBen}){
     setUsers(u=>u.map(x=>x.id===editUser.id?{...x,...updates}:x));
     setMsg("✅ User updated!");setEditUser(null);
   }
-  async function deleteUser(id){if(!window.confirm("Remove this user account?"))return;await deleteAppUser(id);setUsers(u=>u.filter(x=>x.id!==id));setMsg("✅ User removed.");}
+
+  async function deactivateUser(u){
+    // Check if officer has active beneficiaries
+    if(u.role==="Programme Officer"){
+      const myBens=(bens||[]).filter(b=>b.assigned_to===u.id&&b.status==="Active");
+      if(myBens.length>0){setMsg(`⚠️ ${u.name} has ${myBens.length} active beneficiar${myBens.length===1?"y":"ies"}. Please reassign them before deactivating.`);return;}
+    }
+    // Check if coordinator has active officers
+    if(u.role==="Programme Coordinator"){
+      const myOfficers=activeUsers.filter(o=>o.role==="Programme Officer"&&o.coordinator_id===u.id);
+      if(myOfficers.length>0){setMsg(`⚠️ ${u.name} supervises ${myOfficers.length} active officer${myOfficers.length===1?"":"s"}. Please reassign them to another coordinator before deactivating.`);return;}
+    }
+    // Block deactivating self
+    if(u.id===user.id){setMsg("❌ You cannot deactivate your own account.");return;}
+    // Block deactivating last Admin
+    if(u.role==="Admin"&&adminCount<=1){setMsg("❌ Cannot deactivate the last Admin account. Create another Admin first.");return;}
+    if(!window.confirm(`Deactivate ${u.name}? They will no longer be able to log in. Their data will be preserved.`))return;
+    await supabase.from("app_users").update({status:"Inactive"}).eq("id",u.id);
+    setUsers(us=>us.map(x=>x.id===u.id?{...x,status:"Inactive"}:x));
+    setMsg(`✅ ${u.name} has been deactivated.`);
+  }
+
+  async function reactivateUser(u){
+    await supabase.from("app_users").update({status:"Active"}).eq("id",u.id);
+    setUsers(us=>us.map(x=>x.id===u.id?{...x,status:"Active"}:x));
+    // Send password reset email so they can log back in cleanly
+    const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin});
+    if(!error){setMsg(`✅ ${u.name} has been reactivated. A password reset email has been sent to ${u.email}.`);}
+    else{setMsg(`✅ ${u.name} has been reactivated. Please manually reset their password.`);}
+  }
+
+  async function confirmDelete(){
+    if(deleteText!=="DELETE"){setMsg("❌ Please type DELETE to confirm.");return;}
+    const u=deleteConfirm;
+    if(u.id===user.id){setMsg("❌ You cannot delete your own account.");setDeleteConfirm(null);setDeleteText("");return;}
+    if(u.role==="Admin"&&adminCount<=1){setMsg("❌ Cannot delete the last Admin account.");setDeleteConfirm(null);setDeleteText("");return;}
+    await deleteAppUser(u.id);
+    setUsers(us=>us.filter(x=>x.id!==u.id));
+    setMsg(`✅ ${u.name} permanently deleted.`);
+    setDeleteConfirm(null);setDeleteText("");
+  }
+
   async function sendResetEmail(u){
+    if(u.status==="Inactive"){setMsg("❌ This account is deactivated. Reactivate it first before resetting the password.");setChangePwUser(null);return;}
     const{error}=await supabase.auth.resetPasswordForEmail(u.email,{redirectTo:window.location.origin});
     if(error){setMsg("❌ Could not send reset email: "+error.message);}
-    else{setMsg("✅ Password reset email sent to "+u.email+". They can follow the link to set a new password.");}
+    else{setMsg("✅ Password reset email sent to "+u.email+".");}
     setChangePwUser(null);
   }
+
+  function UserRow({u,i,inactive=false}){
+    const rc=roleColor(u.role);
+    const coord=u.coordinator_id?users.find(x=>x.id===u.coordinator_id):null;
+    return(<tr style={{background:inactive?"#FAFAFA":i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,opacity:inactive?0.75:1}}>
+      <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:34,height:34,borderRadius:"50%",background:inactive?"#ccc":aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(u.name)}</div>
+        <div><div style={{fontWeight:700,fontSize:13,color:inactive?T.grey:T.navy}}>{u.name}</div>
+        {inactive&&<div style={{fontSize:10,color:"#C0392B",fontWeight:700}}>INACTIVE</div>}</div>
+      </div></td>
+      <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
+      <td style={{padding:"13px 16px"}}><span style={{background:rc.bg,color:rc.color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
+      <td style={{padding:"13px 16px",fontSize:12,color:T.grey}}>{coord?coord.name:"—"}</td>
+      <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {!inactive&&<><button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>✏️ Edit</button>
+        <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📧 Reset</button>
+        {u.id!==user.id&&<button onClick={()=>deactivateUser(u)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF5E7",color:"#E67E22"}}>⏸ Deactivate</button>}</>}
+        {inactive&&<button onClick={()=>reactivateUser(u)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>▶ Reactivate</button>}
+        {u.id!==user.id&&<button onClick={()=>{setDeleteConfirm(u);setDeleteText("");}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑 Delete</button>}
+      </div></td>
+    </tr>);
+  }
+
   return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="User Management" sub="Admin only — manage platform users"/>
     <div style={{padding:"24px 32px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}><div style={{fontSize:13,color:T.grey}}>{users.length} users</div><Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn></div>
-      {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div style={{fontSize:13,color:T.grey}}>{activeUsers.length} active · {inactiveUsers.length} inactive</div>
+        <Btn variant="primary" onClick={()=>{setShowAdd(!showAdd);setEditUser(null);setChangePwUser(null);}}>+ Create User</Btn>
+      </div>
+      {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":msg.includes("⚠️")?"#FEF9E7":"#FDEDEC",color:msg.includes("✅")?"#1D8348":msg.includes("⚠️")?"#9A7D0A":"#C0392B",borderRadius:8,padding:"10px 16px",marginBottom:16,fontSize:13}}>{msg}</div>}
+
+      {/* Delete confirmation box */}
+      {deleteConfirm&&<div style={{background:"#FDEDEC",border:"1px solid #F1948A",borderRadius:12,padding:"20px 24px",marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:14,color:"#922B21",marginBottom:8}}>⚠️ Permanently Delete — {deleteConfirm.name}</div>
+        <div style={{fontSize:13,color:"#C0392B",marginBottom:14}}>This cannot be undone. All their data will be permanently removed. Type <strong>DELETE</strong> to confirm.</div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <input value={deleteText} onChange={e=>setDeleteText(e.target.value)} placeholder="Type DELETE to confirm" style={{border:"1px solid #F1948A",borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",width:220}}/>
+          <button onClick={confirmDelete} style={{padding:"8px 18px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#C0392B",color:"#fff"}}>Confirm Delete</button>
+          <button onClick={()=>{setDeleteConfirm(null);setDeleteText("");}} style={{padding:"8px 18px",borderRadius:8,border:`1px solid ${T.greyM}`,cursor:"pointer",fontSize:12,background:"#fff",color:T.grey}}>Cancel</button>
+        </div>
+      </div>}
+
+      {/* Create user form */}
       {showAdd&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Create New User</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
           <FI label="Full Name *" value={form.name} onChange={v=>s("name",v)}/>
           <FI label="Email *" value={form.email} onChange={v=>s("email",v)} type="email"/>
           <FI label="Password *" value={form.password} onChange={v=>s("password",v)} type="password"/>
-          <FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer","Programme Coordinator","Admin"]}/>
+          <FI label="Role" value={form.role} onChange={v=>s("role",v)} options={["Programme Officer","Programme Coordinator","Management","Admin"]}/>
           {form.role==="Programme Officer"&&coordinators.length>0&&<FI label="Assign to Coordinator" value={form.coordinator_id} onChange={v=>s("coordinator_id",v)} options={[{value:"",label:"— None —"},...coordinators.map(c=>({value:c.id,label:c.name}))]}/>}
         </div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={addUser}>Create Account</Btn><Btn variant="secondary" onClick={()=>setShowAdd(false)}>Cancel</Btn></div>
       </div>}
+
+      {/* Edit user form */}
       {editUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:16}}>Edit User — {editUser.name}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
@@ -1179,31 +1278,31 @@ function UserMgmt({users,setUsers,user,onToggle,onNavigateToBen}){
         </div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={saveEdit}>Save</Btn><Btn variant="secondary" onClick={()=>setEditUser(null)}>Cancel</Btn></div>
       </div>}
+
+      {/* Reset password form */}
       {changePwUser&&<div style={{background:"#fff",borderRadius:12,padding:"24px",marginBottom:20,boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
         <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,color:T.navy,marginBottom:10}}>Reset Password — {changePwUser.name}</div>
-        <div style={{fontSize:13,color:T.grey,marginBottom:16}}>A password reset email will be sent to <strong>{changePwUser.email}</strong>. They will follow the link to set a new password.</div>
+        <div style={{fontSize:13,color:T.grey,marginBottom:16}}>A password reset email will be sent to <strong>{changePwUser.email}</strong>.</div>
         <div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>sendResetEmail(changePwUser)}>📧 Send Reset Email</Btn><Btn variant="secondary" onClick={()=>setChangePwUser(null)}>Cancel</Btn></div>
       </div>}
+
+      {/* Active users table */}
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.navy,marginBottom:10}}>Active Users ({activeUsers.length})</div>
+      <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",marginBottom:24}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role","Coordinator","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <tbody>{activeUsers.map((u,i)=><UserRow key={u.id} u={u} i={i}/>)}</tbody>
+        </table>
+      </div>
+
+      {/* Inactive users table */}
+      {inactiveUsers.length>0&&<><div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.grey,marginBottom:10}}>Inactive Users ({inactiveUsers.length})</div>
       <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["User","Email","Role","Coordinator","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
-          <tbody>{users.map((u,i)=>{
-            const rc=roleColor(u.role);
-            const coord=u.coordinator_id?users.find(x=>x.id===u.coordinator_id):null;
-            return(<tr key={u.id} style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`}}>
-              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:34,height:34,borderRadius:"50%",background:aColor(u.name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff"}}>{inits(u.name)}</div><span style={{fontWeight:700,fontSize:13,color:T.navy}}>{u.name}</span></div></td>
-              <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{u.email}</td>
-              <td style={{padding:"13px 16px"}}><span style={{background:rc.bg,color:rc.color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>{u.role}</span></td>
-              <td style={{padding:"13px 16px",fontSize:12,color:T.grey}}>{coord?coord.name:"—"}</td>
-              <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:6}}>
-                <button onClick={()=>{setEditUser({...u});setShowAdd(false);setChangePwUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>✏️ Edit</button>
-                <button onClick={()=>{setChangePwUser(u);setShowAdd(false);setEditUser(null);}} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📧 Reset</button>
-                {u.role!=="Admin"&&<button onClick={()=>deleteUser(u.id)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑 Remove</button>}
-              </div></td>
-            </tr>);
-          })}</tbody>
+          <tbody>{inactiveUsers.map((u,i)=><UserRow key={u.id} u={u} i={i} inactive/>)}</tbody>
         </table>
-      </div>
+      </div></>}
     </div>
   </div>);
 }
@@ -1245,7 +1344,7 @@ function MyAccount({user,users,setUsers,onToggle,onNavigateToBen}){
 }
 
 function MyOfficers({user,users,bens,onNavigate,onToggle,onNavigateToBen}){
-  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
+  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive");
   return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="My Officers" sub="Programme officers under your supervision"/>
     <div style={{padding:"24px 32px"}}>
       {myOfficers.length===0&&<div style={{background:"#fff",borderRadius:12,padding:32,textAlign:"center",color:T.grey,fontSize:14,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>No officers assigned to you yet. Ask an Admin to assign officers under your coordination.</div>}
@@ -1312,7 +1411,7 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
   const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
   // Who can be viewed
-  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id);
+  const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive");
   const allOfficers=users.filter(u=>u.role==="Programme Officer");
   const allCoordinators=users.filter(u=>u.role==="Programme Coordinator");
   const viewableUsers=user.role==="Admin"
@@ -1630,7 +1729,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.3"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1902,7 +2001,7 @@ export default function App(){
     if(page==="posts")return <PostsPage bens={bens} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="my-account")return <MyAccount user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="my-officers"&&user.role==="Programme Coordinator")return <MyOfficers user={user} users={users} bens={bens} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} user={user} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="settings"&&user.role==="Admin")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="planner")return <ActivityPlanner user={user} users={users} initialTarget={plannerTarget} onClearTarget={()=>setPlannerTarget(null)} onToggle={tog} onNavigateToBen={navBen}/>;
