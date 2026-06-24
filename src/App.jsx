@@ -712,7 +712,7 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
     try{
       const ext=file.name.split(".").pop();
       const path=`${ben.id}.${ext}`;
-      const{error:upErr}=await supabase.storage.from(PHOTO_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
+      const{error:upErr}=await supabase.storage.from(PHOTO_BUCKET).upload(storagePath,file,{upsert:true,contentType:file.type});
       if(upErr){setMsg("❌ Upload failed: "+upErr.message);setUploading(false);return;}
       // Store the bare path — signed URLs are generated on load
       const{error:dbErr}=await supabase.from("beneficiaries").update({photo_url:path}).eq("id",ben.id);
@@ -858,13 +858,13 @@ function DocumentsTab({ben,user}){
     setUploading(true);setMsg("");
     try{
       const ext=file.name.split(".").pop();
-      const path=`${ben.id}/${Date.now()}_${title.trim().replace(/\s+/g,"_")}.${ext}`;
-      const{error:upErr}=await supabase.storage.from(DOC_BUCKET).upload(path,file,{contentType:file.type});
+      const storagePath=`${ben.id}/${Date.now()}_${title.trim().replace(/\s+/g,"_")}.${ext}`;
+      const{error:upErr}=await supabase.storage.from(DOC_BUCKET).upload(storagePath,file,{contentType:file.type});
       if(upErr){setMsg("❌ Upload failed: "+upErr.message);setUploading(false);return;}
       const{data:inserted,error:dbErr}=await supabase.from("documents").insert([{
         beneficiary_id:ben.id,
-        name:title.trim(),
-        url:path,
+        file_name:title.trim(),
+        file_path:storagePath,
         created_at:new Date().toISOString(),
         uploaded_by:user.id,
         uploaded_by_name:user.name,
@@ -884,11 +884,11 @@ function DocumentsTab({ben,user}){
 
   async function handleDownload(doc){
     try{
-      const{data,error}=await supabase.storage.from(DOC_BUCKET).createSignedUrl(doc.url,60*60);
+      const{data,error}=await supabase.storage.from(DOC_BUCKET).createSignedUrl(doc.file_path,60*60);
       if(error||!data?.signedUrl){setMsg("❌ Could not generate download link.");return;}
       const a=document.createElement("a");
       a.href=data.signedUrl;
-      a.download=doc.file_name||doc.name;
+      a.download=doc.file_name||'document';
       document.body.appendChild(a);a.click();document.body.removeChild(a);
     }catch(e){setMsg("❌ Download failed. Please try again.");}
   }
@@ -896,7 +896,7 @@ function DocumentsTab({ben,user}){
   async function handleDelete(doc){
     if(!window.confirm(`Delete "${doc.name}"? This cannot be undone.`))return;
     try{
-      await supabase.storage.from(DOC_BUCKET).remove([doc.url]);
+      await supabase.storage.from(DOC_BUCKET).remove([doc.file_path]);
       await supabase.from("documents").delete().eq("id",doc.id);
       setDocs(d=>d.filter(x=>x.id!==doc.id));
       setMsg("✅ Document deleted.");
@@ -950,11 +950,10 @@ function DocumentsTab({ben,user}){
     </div>}
     {!loading&&docs.length>0&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {docs.map(doc=>(<div key={doc.id} style={{display:"flex",alignItems:"center",gap:12,background:T.off,borderRadius:10,padding:"12px 14px",border:`1px solid ${T.greyL}`}}>
-        <div style={{fontSize:28,flexShrink:0}}>{fileIcon(doc.file_name||doc.url)}</div>
+        <div style={{fontSize:28,flexShrink:0}}>{fileIcon(doc.file_path)}</div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontWeight:700,fontSize:13,color:T.navy,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
           <div style={{fontSize:11,color:T.grey}}>
-            {doc.file_name&&<span style={{marginRight:8}}>{doc.file_name}</span>}
             {doc.file_size&&<span style={{marginRight:8}}>· {formatSize(doc.file_size)}</span>}
             {doc.uploaded_by_name&&<span style={{marginRight:8}}>· {doc.uploaded_by_name}</span>}
             {doc.created_at&&<span>· {formatDate(doc.created_at)}</span>}
@@ -1592,7 +1591,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       const path=`app-logo/logo.${ext}`;
       // The logo goes in the PUBLIC branding bucket (not the private photo
       // bucket) so the sign-in page can display it before anyone logs in.
-      const{error:upErr}=await supabase.storage.from(BRAND_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
+      const{error:upErr}=await supabase.storage.from(BRAND_BUCKET).upload(storagePath,file,{upsert:true,contentType:file.type});
       if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
       const{data:urlData}=supabase.storage.from(BRAND_BUCKET).getPublicUrl(path);
       const publicUrl=urlData.publicUrl+"?t="+Date.now();
@@ -1631,7 +1630,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.2"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
