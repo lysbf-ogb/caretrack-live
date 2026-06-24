@@ -1414,12 +1414,17 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
 
   // Who can be viewed
   const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive");
-  const allOfficers=users.filter(u=>u.role==="Programme Officer");
-  const allCoordinators=users.filter(u=>u.role==="Programme Coordinator");
+  // Admin sees ALL users including inactive (for auditing past plans)
+  const allOfficers=user.role==="Admin"
+    ?users.filter(u=>u.role==="Programme Officer")
+    :users.filter(u=>u.role==="Programme Officer"&&u.status!=="Inactive");
+  const allCoordinators=user.role==="Admin"
+    ?users.filter(u=>u.role==="Programme Coordinator")
+    :users.filter(u=>u.role==="Programme Coordinator"&&u.status!=="Inactive");
   const viewableUsers=user.role==="Admin"
     ?[user,...allCoordinators,...allOfficers]
     :user.role==="Management"
-      ?[...users.filter(u=>u.role==="Admin"&&u.id!==user.id),...users.filter(u=>u.role==="Programme Coordinator"),...users.filter(u=>u.role==="Programme Officer"&&u.status!=="Inactive"),user]
+      ?[...users.filter(u=>u.role==="Admin"&&u.id!==user.id),...users.filter(u=>u.role==="Programme Coordinator"&&u.status!=="Inactive"),...users.filter(u=>u.role==="Programme Officer"&&u.status!=="Inactive"),user]
       :user.role==="Programme Coordinator"
         ?[user,...myOfficers]
         :[user];
@@ -1595,12 +1600,14 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
       {/* Officer tabs for coordinator/admin */}
       {viewableUsers.length>1&&<div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
         <span style={{fontSize:11,color:T.grey,marginRight:4}}>Viewing:</span>
-        {viewableUsers.map(u=>(
-          <button key={u.id} onClick={()=>setViewUserId(u.id)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${viewUserId===u.id?"#1E6B3C":T.greyM}`,background:viewUserId===u.id?"#1E6B3C":"#fff",color:viewUserId===u.id?"#fff":T.navy,fontSize:11,cursor:"pointer",fontWeight:viewUserId===u.id?700:400}}>
+        {viewableUsers.map(u=>{
+          const isInactive=u.status==="Inactive";
+          return(<button key={u.id} onClick={()=>setViewUserId(u.id)} style={{padding:"4px 12px",borderRadius:20,border:`1px solid ${viewUserId===u.id?"#1E6B3C":T.greyM}`,background:viewUserId===u.id?"#1E6B3C":"#fff",color:viewUserId===u.id?"#fff":isInactive?T.grey:T.navy,fontSize:11,cursor:"pointer",fontWeight:viewUserId===u.id?700:400,opacity:isInactive?0.6:1}}>
             {u.id===user.id?"My plan":u.name}
-            {u.role==="Programme Coordinator"&&u.id!==user.id&&<span style={{fontSize:9,marginLeft:4,opacity:0.8}}>(Coord)</span>}
-          </button>
-        ))}
+            {isInactive&&<span style={{fontSize:9,marginLeft:4,color:"#E74C3C"}}>(inactive)</span>}
+            {u.role==="Programme Coordinator"&&u.id!==user.id&&<span style={{fontSize:9,marginLeft:4,opacity:0.7}}>(Coord)</span>}
+          </button>);
+        })}
       </div>}
 
       {/* Plan status for officer viewing own plan */}
@@ -1883,7 +1890,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
