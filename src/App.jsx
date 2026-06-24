@@ -355,25 +355,28 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
 }
 
 function Dashboard({bens,user,users,onNavigate,onToggle,onNavigateToBen}){
-  // Dashboard stats: Admin sees all, Coordinator sees all (for board overview), Officer sees own
-  const vis=user.role==="Programme Officer"
-    ?bens.filter(b=>b.assigned_to===user.id)
-    :bens;
+  // Dashboard stats: ALL roles see full organisation numbers — gives officers
+  // the sense of collective impact. Clicking a card filters to own cases only
+  // for officers (confidentiality preserved in the list).
+  const vis=bens;
+  const myBens=user.role==="Programme Officer"?bens.filter(b=>b.assigned_to===user.id):bens;
   const counts=[vis.length,vis.filter(b=>b.status==="Active").length,vis.filter(b=>b.status==="Completed").length,vis.filter(b=>b.gender==="Male").length,vis.filter(b=>b.gender==="Female").length];
   const statFilters=["all","Active","Completed","Male","Female"];
-  const overdueCount=vis.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
+  const overdueCount=myBens.filter(b=>!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000).length;
+  // Officers navigate to their own filtered list when clicking cards
+  function handleStatClick(filter){onNavigate("ben-list",filter);}
   return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Dashboard" sub="View current tasks, activities and reports"/>
     <div style={{padding:"28px 32px"}}>
       <SH>Programme Summary at a Glance</SH>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:16,marginBottom:36}}>
-        {STAT_CARDS.map((s,i)=>(<div key={s.label} className="card-hover" onClick={()=>onNavigate("ben-list",{stat:statFilters[i]})} style={{background:s.bg,borderRadius:16,padding:"32px 16px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.20)"}}>
+        {STAT_CARDS.map((s,i)=>(<div key={s.label} className="card-hover" onClick={()=>handleStatClick({stat:statFilters[i]})} style={{background:s.bg,borderRadius:16,padding:"32px 16px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.20)"}}>
           <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:26}}>{s.icon}</div>
           <div style={{fontSize:52,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{counts[i]}</div>
           <div style={{fontSize:11,color:"rgba(255,255,255,0.88)",textTransform:"uppercase",letterSpacing:1.5,fontWeight:700,marginTop:10}}>{s.label}</div>
         </div>))}
       </div>
       {overdueCount>0&&(<><SH>Follow-Up Alerts</SH>
-      <div onClick={()=>onNavigate("ben-list",{overdue:true})} style={{background:"#FDEDEC",border:"1px solid #F1948A",borderRadius:12,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:36,cursor:"pointer",transition:"all 0.18s"}} className="card-hover">
+      <div onClick={()=>handleStatClick({overdue:true})} style={{background:"#FDEDEC",border:"1px solid #F1948A",borderRadius:12,padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:36,cursor:"pointer",transition:"all 0.18s"}} className="card-hover">
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           <div style={{width:48,height:48,borderRadius:"50%",background:"#C0392B",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>⚠️</div>
           <div>
@@ -392,7 +395,7 @@ function Dashboard({bens,user,users,onNavigate,onToggle,onNavigateToBen}){
           const females=inComp.filter(b=>b.gender==="Female").length;
           const malePct=count>0?Math.round((males/count)*100):0;
           return(
-          <div key={c.id} className="card-hover" onClick={()=>onNavigate("ben-list",{comp:c.id})} style={{background:c.color,borderRadius:16,padding:"32px 20px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
+          <div key={c.id} className="card-hover" onClick={()=>handleStatClick({comp:c.id})} style={{background:c.color,borderRadius:16,padding:"32px 20px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
             <div style={{width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:28}}>{c.icon}</div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.92)",fontWeight:700,marginBottom:16,lineHeight:1.4}}>{c.name}</div>
             <div style={{fontSize:56,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
@@ -1474,7 +1477,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.6.9"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
