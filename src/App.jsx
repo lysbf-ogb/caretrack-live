@@ -464,7 +464,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
   function getQuarter(dateStr){if(!dateStr)return null;const m=new Date(dateStr).getMonth()+1;if(m<=3)return"Q1";if(m<=6)return"Q2";if(m<=9)return"Q3";return"Q4";}
 
   // Base visibility: coordinators see only their officers' beneficiaries
-  const baseBens=user.role==="Admin"
+  const baseBens=user.role==="Admin"||user.role==="Management"
     ?bens
     :user.role==="Programme Coordinator"
       ?bens.filter(b=>myOfficerIds.includes(b.assigned_to))
@@ -1883,7 +1883,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.6"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
