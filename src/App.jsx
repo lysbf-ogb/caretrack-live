@@ -807,11 +807,165 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
             {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",localBen.occupation],["Employment Status",localBen.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={localBen.disability}/></div>}
             {tab==="followups"&&<FollowUpsTab ben={localBen} user={user} users={users} onAddPost={onAddPost}/>}
-            {tab==="documents"&&<div style={{textAlign:"center",padding:"36px 0"}}><div style={{fontSize:44,marginBottom:12}}>📁</div><div style={{color:T.grey,fontSize:14,marginBottom:16}}>No documents uploaded yet.</div><Btn variant="primary">+ Upload Document</Btn></div>}
+            {tab==="documents"&&<DocumentsTab ben={localBen} user={user}/>}
           </div>
         </div>
       </div>
     </div>
+  </div>);
+}
+
+function DocumentsTab({ben,user}){
+  const DOC_BUCKET="beneficiary-documents";
+  const MAX_SIZE=5*1024*1024; // 5MB
+  const ALLOWED=["application/pdf","application/msword","application/vnd.openxmlformats-officedocument.wordprocessingml.document","application/vnd.ms-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","image/jpeg","image/png"];
+  const ALLOWED_EXT=[".pdf",".doc",".docx",".xls",".xlsx",".jpg",".jpeg",".png"];
+
+  const [docs,setDocs]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [uploading,setUploading]=useState(false);
+  const [title,setTitle]=useState("");
+  const [msg,setMsg]=useState("");
+  const fileRef=useRef();
+
+  useEffect(()=>{loadDocs();},[ben.id]);
+
+  async function loadDocs(){
+    setLoading(true);
+    try{
+      const{data,error}=await supabase.from("documents").select("*").eq("beneficiary_id",ben.id).order("created_at",{ascending:false});
+      if(!error&&data)setDocs(data);
+    }catch(e){}
+    setLoading(false);
+  }
+
+  function fileIcon(name){
+    if(!name)return"📄";
+    const ext=name.split(".").pop().toLowerCase();
+    if(ext==="pdf")return"📕";
+    if(["doc","docx"].includes(ext))return"📘";
+    if(["xls","xlsx"].includes(ext))return"📗";
+    if(["jpg","jpeg","png"].includes(ext))return"🖼️";
+    return"📄";
+  }
+
+  async function handleUpload(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    if(!title.trim()){setMsg("❌ Please enter a document title first.");fileRef.current.value="";return;}
+    if(!ALLOWED.includes(file.type)){setMsg("❌ File type not allowed. Please upload PDF, Word, Excel, JPG or PNG.");fileRef.current.value="";return;}
+    if(file.size>MAX_SIZE){setMsg("❌ File is too large. Maximum size is 5MB. Please compress and try again.");fileRef.current.value="";return;}
+    setUploading(true);setMsg("");
+    try{
+      const ext=file.name.split(".").pop();
+      const path=`${ben.id}/${Date.now()}_${title.trim().replace(/\s+/g,"_")}.${ext}`;
+      const{error:upErr}=await supabase.storage.from(DOC_BUCKET).upload(path,file,{contentType:file.type});
+      if(upErr){setMsg("❌ Upload failed: "+upErr.message);setUploading(false);return;}
+      const{data:inserted,error:dbErr}=await supabase.from("documents").insert([{
+        beneficiary_id:ben.id,
+        name:title.trim(),
+        url:path,
+        created_at:new Date().toISOString(),
+        uploaded_by:user.id,
+        uploaded_by_name:user.name,
+        file_name:file.name,
+        file_type:file.type,
+        file_size:file.size,
+      }]).select().single();
+      if(dbErr){setMsg("❌ Database error: "+dbErr.message);setUploading(false);return;}
+      setDocs(d=>[inserted,...d]);
+      setTitle("");
+      fileRef.current.value="";
+      setMsg("✅ Document uploaded successfully.");
+      setTimeout(()=>setMsg(""),4000);
+    }catch(e){setMsg("❌ Unexpected error. Please try again.");}
+    setUploading(false);
+  }
+
+  async function handleDownload(doc){
+    try{
+      const{data,error}=await supabase.storage.from(DOC_BUCKET).createSignedUrl(doc.url,60*60);
+      if(error||!data?.signedUrl){setMsg("❌ Could not generate download link.");return;}
+      const a=document.createElement("a");
+      a.href=data.signedUrl;
+      a.download=doc.file_name||doc.name;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }catch(e){setMsg("❌ Download failed. Please try again.");}
+  }
+
+  async function handleDelete(doc){
+    if(!window.confirm(`Delete "${doc.name}"? This cannot be undone.`))return;
+    try{
+      await supabase.storage.from(DOC_BUCKET).remove([doc.url]);
+      await supabase.from("documents").delete().eq("id",doc.id);
+      setDocs(d=>d.filter(x=>x.id!==doc.id));
+      setMsg("✅ Document deleted.");
+      setTimeout(()=>setMsg(""),3000);
+    }catch(e){setMsg("❌ Delete failed.");}
+  }
+
+  function formatSize(bytes){
+    if(!bytes)return"";
+    if(bytes<1024)return bytes+"B";
+    if(bytes<1024*1024)return(bytes/1024).toFixed(1)+"KB";
+    return(bytes/(1024*1024)).toFixed(1)+"MB";
+  }
+
+  function formatDate(str){
+    if(!str)return"";
+    return new Date(str).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+  }
+
+  const canDelete=(doc)=>user.role==="Admin"||(doc.uploaded_by&&doc.uploaded_by===user.id);
+
+  return(<div>
+    {/* Upload area */}
+    <div style={{background:T.off,borderRadius:10,padding:"18px 20px",marginBottom:20,border:`1px dashed ${T.greyM}`}}>
+      <div style={{fontWeight:700,fontSize:13,color:T.navy,marginBottom:12}}>📎 Upload New Document</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginBottom:10}}>
+        <input
+          value={title}
+          onChange={e=>setTitle(e.target.value)}
+          placeholder="Document title e.g. Notification Form, Medical Bill, Consent Form..."
+          spellCheck="true"
+          style={{border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 13px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,outline:"none"}}
+        />
+        <button
+          onClick={()=>title.trim()?fileRef.current.click():setMsg("❌ Please enter a document title first.")}
+          disabled={uploading}
+          style={{padding:"9px 18px",borderRadius:8,border:"none",cursor:uploading?"not-allowed":"pointer",fontSize:13,fontWeight:700,background:"#27AE60",color:"#fff",opacity:uploading?0.6:1,whiteSpace:"nowrap"}}
+        >{uploading?"Uploading...":"+ Choose File"}</button>
+      </div>
+      <div style={{fontSize:11,color:T.grey}}>Allowed: PDF, Word, Excel, JPG, PNG · Maximum: 5MB per file</div>
+      <input ref={fileRef} type="file" accept={ALLOWED_EXT.join(",")} onChange={handleUpload} style={{display:"none"}}/>
+    </div>
+
+    {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,fontWeight:600}}>{msg}</div>}
+
+    {/* Document list */}
+    {loading&&<div style={{textAlign:"center",padding:"24px 0",color:T.grey,fontSize:13}}>Loading documents...</div>}
+    {!loading&&docs.length===0&&<div style={{textAlign:"center",padding:"36px 0"}}>
+      <div style={{fontSize:44,marginBottom:10}}>📁</div>
+      <div style={{color:T.grey,fontSize:13}}>No documents uploaded yet.</div>
+    </div>}
+    {!loading&&docs.length>0&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {docs.map(doc=>(<div key={doc.id} style={{display:"flex",alignItems:"center",gap:12,background:T.off,borderRadius:10,padding:"12px 14px",border:`1px solid ${T.greyL}`}}>
+        <div style={{fontSize:28,flexShrink:0}}>{fileIcon(doc.file_name||doc.url)}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:13,color:T.navy,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
+          <div style={{fontSize:11,color:T.grey}}>
+            {doc.file_name&&<span style={{marginRight:8}}>{doc.file_name}</span>}
+            {doc.file_size&&<span style={{marginRight:8}}>· {formatSize(doc.file_size)}</span>}
+            {doc.uploaded_by_name&&<span style={{marginRight:8}}>· {doc.uploaded_by_name}</span>}
+            {doc.created_at&&<span>· {formatDate(doc.created_at)}</span>}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <button onClick={()=>handleDownload(doc)} style={{padding:"6px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>⬇ Download</button>
+          {canDelete(doc)&&<button onClick={()=>handleDelete(doc)} style={{padding:"6px 12px",borderRadius:7,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FDEDEC",color:"#C0392B"}}>🗑</button>}
+        </div>
+      </div>))}
+    </div>}
   </div>);
 }
 
@@ -1477,7 +1631,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.0"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.1"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
