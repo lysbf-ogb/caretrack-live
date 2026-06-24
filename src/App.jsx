@@ -700,10 +700,10 @@ function FollowUpsTab({ben,user,users,onAddPost}){
         <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Admin"?"#1A252F":"#2980B9",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
         <div style={{flex:1}}><div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div></div>
       </div>))}
-      <div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
+      {user.role!=="Management"&&<div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
         <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)} placeholder="Write a comment or reply..." spellCheck="true" style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
         <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
-      </div>
+      </div>}
     </div>))}
   </div>);
 }
@@ -930,8 +930,8 @@ function DocumentsTab({ben,user}){
   const canDelete=(doc)=>user.role==="Admin"||user.role==="Programme Coordinator"||(doc.uploaded_by&&doc.uploaded_by===user.id);
 
   return(<div>
-    {/* Upload area */}
-    <div style={{background:T.off,borderRadius:10,padding:"18px 20px",marginBottom:20,border:`1px dashed ${T.greyM}`}}>
+    {/* Upload area — hidden for Management */}
+    {user.role!=="Management"&&<div style={{background:T.off,borderRadius:10,padding:"18px 20px",marginBottom:20,border:`1px dashed ${T.greyM}`}}>
       <div style={{fontWeight:700,fontSize:13,color:T.navy,marginBottom:12}}>📎 Upload New Document</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10,marginBottom:10}}>
         <input
@@ -949,7 +949,7 @@ function DocumentsTab({ben,user}){
       </div>
       <div style={{fontSize:11,color:T.grey}}>Allowed: PDF, Word, Excel, JPG, PNG · Maximum: 5MB per file</div>
       <input ref={fileRef} type="file" accept={ALLOWED_EXT.join(",")} onChange={handleUpload} style={{display:"none"}}/>
-    </div>
+    </div>}
 
     {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,fontWeight:600}}>{msg}</div>}
 
@@ -1890,7 +1890,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.7"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.7.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
