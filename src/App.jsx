@@ -1871,13 +1871,10 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
-        {logoMsg&&<div style={{background:logoMsg.includes("✅")?"#EAFAF1":"#FDEDEC",color:logoMsg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"9px 13px",fontSize:12,marginBottom:12}}>{logoMsg}</div>}
-        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",background:T.off,marginBottom:14,cursor:user.role==="Management"?"default":"pointer"}} onClick={()=>user.role!=="Management"&&!logoBusy&&fileRef.current.click()}>
-          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>{logoBusy?"Uploading...":user.role==="Management"?"No logo uploaded yet":"Click to upload your logo"}</div></div>}
-          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogo}/>
+        <div style={{border:`1px solid ${T.greyL}`,borderRadius:12,padding:"28px",textAlign:"center",background:T.off,marginBottom:14}}>
+          {logoUrl?<img src={logoUrl} alt="CareTrack Ghana Logo" style={{width:120,height:120,objectFit:"contain"}}/>:<div style={{fontSize:13,color:T.grey}}>No logo configured.</div>}
         </div>
-        {user.role!=="Management"&&<div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>}
-        {user.role==="Management"&&<div style={{fontSize:11,color:T.grey,fontStyle:"italic"}}>Logo upload is managed by the Administrator.</div>}
+        <div style={{fontSize:11,color:T.grey,fontStyle:"italic"}}>Logo is managed by CareTrack Ghana.</div>
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
@@ -1890,7 +1887,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Demo"],["Version","2.8.0"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Demo"],["Version","2.8.1"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1963,7 +1960,7 @@ export default function App(){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);const [page,setPage]=useState("dashboard");
   const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);const [plannerTarget,setPlannerTarget]=useState(null);
-  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
+  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState("https://caretrackghana.com/logo.png");const [dashFilter,setDashFilter]=useState({});
   const [sidebarOpen,setSidebarOpen]=useState(true);const [recovery,setRecovery]=useState(false);
 
   useEffect(()=>{
