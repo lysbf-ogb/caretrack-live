@@ -116,13 +116,13 @@ const CSS=`
 const T={white:"#FFFFFF",navy:"#1A252F",slate:"#2A4365",green:"#27AE60",off:"#F7FAFC",grey:"#718096",greyL:"#EDF2F7",greyM:"#CBD5E0",red:"#C0392B",redL:"#FDEDEC"};
 
 const COMPONENTS=[
-  {id:1,name:"Sports for Development",icon:"🏃",color:"#E74C3C",light:"#FDEDEC"},
-  {id:2,name:"Youth Leadership & Mentorship",icon:"🤝",color:"#2980B9",light:"#EBF5FB"},
-  {id:3,name:"Entrepreneurship & Skills Development",icon:"🛠️",color:"#F39C12",light:"#FEF9E7"},
-  {id:4,name:"Education Support",icon:"📚",color:"#27AE60",light:"#EAFAF1"},
-  {id:5,name:"Health & Wellness",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
-  {id:6,name:"Disability Inclusion & Social Protection",icon:"🫂",color:"#8E44AD",light:"#F5EEF8"},
-  {id:7,name:"Environmental Sanitation & Community Service",icon:"♻️",color:"#16A085",light:"#E8F8F5"},
+  {id:1,name:"Education Support (ES)",icon:"📚",color:"#E74C3C",light:"#FDEDEC"},
+  {id:2,name:"Children in the Family (CIF)",icon:"👨‍👩‍👧",color:"#2980B9",light:"#EBF5FB"},
+  {id:3,name:"Residential Home (RH)",icon:"🏠",color:"#F39C12",light:"#FEF9E7"},
+  {id:4,name:"Drop-In Centre (DIC)",icon:"🚪",color:"#27AE60",light:"#EAFAF1"},
+  {id:5,name:"Health & Wellness (HW)",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
+  {id:6,name:"Technical and Vocational Education and Training (TVET)",icon:"👷",color:"#8E44AD",light:"#F5EEF8"},
+  {id:7,name:"Street Work (SW)",icon:"👟",color:"#16A085",light:"#E8F8F5"},
 ];
 
 const STAT_CARDS=[
@@ -304,7 +304,7 @@ function Login({onLogin,users,logoUrl}){
   }
   return(<div style={{minHeight:"100vh",background:`linear-gradient(160deg,#1A252F 0%,#27AE60 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{background:"#fff",borderRadius:20,padding:"44px 40px",width:400,boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
-      <div style={{textAlign:"center",marginBottom:28}}><Logo size={56} color="#27AE60" url={logoUrl}/><div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:T.navy,marginTop:10}}>OGB App</div><div style={{fontSize:12,color:T.grey,marginTop:4}}>LYSBF · Community Youth Empowerment Programme</div></div>
+      <div style={{textAlign:"center",marginBottom:28}}><Logo size={56} color="#27AE60" url={logoUrl}/><div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:T.navy,marginTop:10}}>OGB App</div><div style={{fontSize:12,color:T.grey,marginTop:4}}>Case Management Platform for NGOs, schools, and corporations.</div></div>
       {err&&<div style={{background:T.redL,color:T.red,borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:14,textAlign:"center"}}>{err}</div>}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <input placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} type="email" onKeyDown={e=>e.key==="Enter"&&go()} style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
@@ -989,8 +989,8 @@ function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
         <div style={{textAlign:"center",borderBottom:`2px solid ${T.navy}`,paddingBottom:20,marginBottom:24}}>
           {ben.photo_url&&<img src={ben.photo_url} alt={ben.name} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.navy}`,marginBottom:12,display:"block",margin:"0 auto 12px"}}/>}
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>LAWYER YAW SARPONG BOATENG FOUNDATION</div>
-          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Community Youth Empowerment Programme (CYEP)</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>CARETRACK GHANA</div>
+          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Sample Programme Component</div>
           <div style={{fontSize:16,fontWeight:700,color:"#27AE60",marginTop:10,textTransform:"uppercase",letterSpacing:2}}>Social Inquiry Report</div>
           <div style={{fontSize:12,color:T.grey,marginTop:4}}>Confidential Document — For Official Use Only</div>
         </div>
@@ -1013,7 +1013,7 @@ function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
         <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${T.greyM}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
           {["Prepared by (Programme Officer)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
         </div>
-        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>LYSBF CYEP · Confidential · {today()}</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>CareTrack Ghana · Confidential · {today()}</div>
       </div>
     </div>
   </div>);
@@ -1883,14 +1883,14 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
         <SH>Official Website</SH>
         <div style={{background:`linear-gradient(135deg,#1A252F,#27AE60)`,borderRadius:12,padding:"24px",textAlign:"center",color:"#fff"}}>
           <div style={{fontSize:32,marginBottom:8}}>🌐</div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,marginBottom:4}}>LYSBF Official Website</div>
-          <div style={{fontSize:12,opacity:0.75,marginBottom:16}}>lysbfoundation.com</div>
-          <a href="https://lysbfoundation.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:"#E74C3C",color:"#fff",padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,marginBottom:4}}>CareTrack Ghana Official Website</div>
+          <div style={{fontSize:12,opacity:0.75,marginBottom:16}}>caretrackghana.com</div>
+          <a href="https://www.caretrackghana.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:"#E74C3C",color:"#fff",padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
         </div>
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.7.8"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Demo"],["Version","2.7.9"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -2130,7 +2130,7 @@ export default function App(){
 
   if(loading)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.off,flexDirection:"column",gap:16}}>
     <div className="spin" style={{width:44,height:44,border:`4px solid ${T.greyM}`,borderTopColor:"#27AE60",borderRadius:"50%"}}/>
-    <div style={{color:T.grey,fontSize:14}}>Loading OGB App...</div>
+    <div style={{color:T.grey,fontSize:14}}>Loading CareTrack Demo...</div>
   </div>);
 
   if(recovery)return <ResetPassword logoUrl={logoUrl} onDone={()=>{setRecovery(false);setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}window.history.replaceState({},"","/");}}/>;
