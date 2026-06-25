@@ -1887,7 +1887,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Demo"],["Version","2.8.1"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Demo"],["Version","2.8.2"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1960,7 +1960,7 @@ export default function App(){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);const [page,setPage]=useState("dashboard");
   const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);const [plannerTarget,setPlannerTarget]=useState(null);
-  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState("https://caretrackghana.com/logo.png");const [dashFilter,setDashFilter]=useState({});
+  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState("https://hdcsjkptswmsjgcsqzki.supabase.co/storage/v1/object/public/app-branding/app-logo/logo.png");const [dashFilter,setDashFilter]=useState({});
   const [sidebarOpen,setSidebarOpen]=useState(true);const [recovery,setRecovery]=useState(false);
 
   useEffect(()=>{
