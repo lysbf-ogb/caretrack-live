@@ -808,7 +808,7 @@ function PhotoUpload({ben,user,onPhotoUpdate}){
   </div>);
 }
 
-const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"🏥"},{k:"education",label:"Education",icon:"📚"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"🫂"},{k:"movement",label:"Movement History",icon:"🔄"},{k:"followups",label:"Follow-Ups",icon:"💬"},{k:"documents",label:"Documents",icon:"📁"}];
+const TABS=[{k:"basic",label:"Basic Info",icon:"👤"},{k:"programme",label:"Programme",icon:"📌"},{k:"health",label:"Health",icon:"🏥"},{k:"education",label:"Education",icon:"📚"},{k:"family",label:"Family",icon:"🏠"},{k:"employment",label:"Employment",icon:"💼"},{k:"disability",label:"Disability",icon:"🫂"},{k:"movement",label:"Movement History",icon:"🔄"},{k:"discussion",label:"Case Discussion",icon:"💬"},{k:"followups",label:"Follow-Ups",icon:"📋"},{k:"documents",label:"Documents",icon:"📁"}];
 
 function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,onNavigateToBen}){
   const [tab,setTab]=useState("basic");
@@ -865,12 +865,155 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
             {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",localBen.occupation],["Employment Status",localBen.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={localBen.disability}/></div>}
             {tab==="movement"&&<MovementHistoryTab ben={localBen} user={user} users={users} comp={comp}/>}
+            {tab==="discussion"&&<CaseDiscussionTab ben={localBen} user={user} users={users}/>}
             {tab==="followups"&&<FollowUpsTab ben={localBen} user={user} users={users} onAddPost={onAddPost}/>}
             {tab==="documents"&&<DocumentsTab ben={localBen} user={user}/>}
           </div>
         </div>
       </div>
     </div>
+  </div>);
+}
+
+function CaseDiscussionTab({ben,user,users}){
+  const [messages,setMessages]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [text,setText]=useState("");
+  const [sending,setSending]=useState(false);
+  const bottomRef=useRef();
+
+  // Only officer assigned to this case and their coordinator can see discussions
+  // Admin can see as safety net but cannot participate
+  const officer=users.find(u=>u.id===ben.assigned_to);
+  const coordId=officer?.coordinator_id||ben.coordinator_id;
+  const canView=user.id===ben.assigned_to||user.id===coordId||user.role==="Admin";
+  const canPost=user.id===ben.assigned_to||user.id===coordId;
+
+  useEffect(()=>{
+    if(!canView)return;
+    loadMessages();
+    // Poll every 15 seconds for new messages
+    const interval=setInterval(loadMessages,15000);
+    return()=>clearInterval(interval);
+  },[ben.id]);
+
+  useEffect(()=>{
+    // Auto-scroll to bottom when messages load
+    if(bottomRef.current)bottomRef.current.scrollIntoView({behavior:"smooth"});
+  },[messages]);
+
+  async function loadMessages(){
+    // Load messages from last 7 days only
+    const sevenDaysAgo=new Date(Date.now()-7*24*60*60*1000).toISOString();
+    const{data}=await supabase.from("case_discussions")
+      .select("*")
+      .eq("beneficiary_id",ben.id)
+      .gte("created_at",sevenDaysAgo)
+      .order("created_at",{ascending:true});
+    if(data)setMessages(data);
+    setLoading(false);
+
+    // Auto-delete messages older than 7 days for this beneficiary
+    await supabase.from("case_discussions")
+      .delete()
+      .eq("beneficiary_id",ben.id)
+      .lt("created_at",sevenDaysAgo);
+  }
+
+  async function sendMessage(){
+    if(!text.trim())return;
+    setSending(true);
+    const{data}=await supabase.from("case_discussions").insert([{
+      beneficiary_id:ben.id,
+      author_id:user.id,
+      author_name:user.name,
+      author_role:user.role,
+      message:text.trim(),
+      created_at:new Date().toISOString()
+    }]).select().single();
+    if(data){
+      setMessages(m=>[...m,data]);
+      setText("");
+      // Notify the other party
+      const notifyId=user.id===ben.assigned_to?coordId:ben.assigned_to;
+      if(notifyId&&notifyId!==user.id){
+        await createNotification(
+          notifyId,"comment",
+          `Case discussion: ${ben.name}`,
+          `${user.name}: "${text.slice(0,60)}${text.length>60?"...":""}"`,
+          ben.id,null
+        );
+      }
+    }
+    setSending(false);
+  }
+
+  function fmtTime(str){
+    if(!str)return"";
+    const d=new Date(str);
+    return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+" · "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  }
+
+  function daysLeft(str){
+    const created=new Date(str);
+    const expires=new Date(created.getTime()+7*24*60*60*1000);
+    const days=Math.ceil((expires-new Date())/(1000*60*60*24));
+    return days>0?days:0;
+  }
+
+  if(!canView)return(
+    <div style={{textAlign:"center",padding:32,color:T.grey,fontSize:13}}>
+      <div style={{fontSize:32,marginBottom:10}}>🔒</div>
+      Case discussions are only visible to the assigned Social Worker and their Coordinator.
+    </div>
+  );
+
+  return(<div>
+    {/* Info banner */}
+    <div style={{background:"#EBF5FB",border:"1px solid #AED6F1",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#1A5276"}}>
+      💬 <strong>Case Discussion</strong> — Messages are automatically deleted after 7 days. Once the case is fully discussed, write the official note in the <strong>Follow-Ups</strong> tab.
+    </div>
+
+    {/* Messages */}
+    <div style={{background:T.off,borderRadius:10,padding:"14px",minHeight:200,maxHeight:400,overflowY:"auto",marginBottom:14,border:`1px solid ${T.greyL}`}}>
+      {loading&&<div style={{textAlign:"center",padding:24,color:T.grey,fontSize:13}}>Loading discussion...</div>}
+      {!loading&&messages.length===0&&<div style={{textAlign:"center",padding:24,color:T.grey,fontSize:13}}>
+        <div style={{fontSize:28,marginBottom:8}}>💬</div>
+        No messages yet. Start the case discussion below.
+      </div>}
+      {messages.map((m,i)=>{
+        const isMe=m.author_id===user.id;
+        const isCoord=m.author_role==="Programme Coordinator";
+        return(<div key={m.id} style={{display:"flex",flexDirection:isMe?"row-reverse":"row",gap:8,marginBottom:12,alignItems:"flex-end"}}>
+          <div style={{width:30,height:30,borderRadius:"50%",background:aColor(m.author_name),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(m.author_name)}</div>
+          <div style={{maxWidth:"70%"}}>
+            <div style={{fontSize:10,color:T.grey,marginBottom:3,textAlign:isMe?"right":"left"}}>
+              {m.author_name} · {isCoord?"Coordinator":"Social Worker"} · {fmtTime(m.created_at)}
+              {i===0&&<span style={{marginLeft:6,background:"#FEF9E7",color:"#9A7D0A",padding:"1px 6px",borderRadius:10,fontSize:9}}>⏳ {daysLeft(m.created_at)}d left</span>}
+            </div>
+            <div style={{background:isMe?"#27AE60":"#fff",color:isMe?"#fff":T.navy,borderRadius:isMe?"12px 12px 4px 12px":"12px 12px 12px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.5,boxShadow:"0 1px 3px rgba(0,0,0,0.08)"}}>
+              {m.message}
+            </div>
+          </div>
+        </div>);
+      })}
+      <div ref={bottomRef}/>
+    </div>
+
+    {/* Message input */}
+    {canPost?<div style={{display:"flex",gap:8}}>
+      <input
+        value={text}
+        onChange={e=>setText(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendMessage()}
+        placeholder="Type your message... (Enter to send)"
+        spellCheck="true"
+        style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,outline:"none"}}
+      />
+      <button onClick={sendMessage} disabled={sending||!text.trim()} style={{padding:"10px 20px",borderRadius:8,border:"none",cursor:sending||!text.trim()?"not-allowed":"pointer",fontSize:13,fontWeight:700,background:"#27AE60",color:"#fff",opacity:sending||!text.trim()?0.5:1}}>
+        {sending?"...":"Send"}
+      </button>
+    </div>:<div style={{fontSize:12,color:T.grey,fontStyle:"italic",textAlign:"center",padding:"8px 0"}}>You can view this discussion but cannot post messages.</div>}
   </div>);
 }
 
@@ -2064,7 +2207,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       {/* App Information */}
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.9.0"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Live"],["Version","2.9.1"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
