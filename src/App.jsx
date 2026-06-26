@@ -116,13 +116,13 @@ const CSS=`
 const T={white:"#FFFFFF",navy:"#1A252F",slate:"#2A4365",green:"#27AE60",off:"#F7FAFC",grey:"#718096",greyL:"#EDF2F7",greyM:"#CBD5E0",red:"#C0392B",redL:"#FDEDEC"};
 
 const COMPONENTS=[
-  {id:1,name:"Education Support (ES)",icon:"📚",color:"#E74C3C",light:"#FDEDEC"},
-  {id:2,name:"Children in the Family (CIF)",icon:"👨‍👩‍👧",color:"#2980B9",light:"#EBF5FB"},
-  {id:3,name:"Residential Home (RH)",icon:"🏠",color:"#F39C12",light:"#FEF9E7"},
-  {id:4,name:"Drop-In Centre (DIC)",icon:"🚪",color:"#27AE60",light:"#EAFAF1"},
-  {id:5,name:"Health & Wellness (HW)",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
-  {id:6,name:"Technical and Vocational Education and Training (TVET)",icon:"👷",color:"#8E44AD",light:"#F5EEF8"},
-  {id:7,name:"Street Work (SW)",icon:"👟",color:"#16A085",light:"#E8F8F5"},
+  {id:1,name:"Sports for Development",icon:"🏃",color:"#E74C3C",light:"#FDEDEC"},
+  {id:2,name:"Youth Leadership & Mentorship",icon:"🤝",color:"#2980B9",light:"#EBF5FB"},
+  {id:3,name:"Entrepreneurship & Skills Development",icon:"🛠️",color:"#F39C12",light:"#FEF9E7"},
+  {id:4,name:"Education Support",icon:"📚",color:"#27AE60",light:"#EAFAF1"},
+  {id:5,name:"Health & Wellness",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
+  {id:6,name:"Disability Inclusion & Social Protection",icon:"🫂",color:"#8E44AD",light:"#F5EEF8"},
+  {id:7,name:"Environmental Sanitation & Community Service",icon:"♻️",color:"#16A085",light:"#E8F8F5"},
 ];
 
 const STAT_CARDS=[
@@ -304,7 +304,7 @@ function Login({onLogin,users,logoUrl}){
   }
   return(<div style={{minHeight:"100vh",background:`linear-gradient(160deg,#1A252F 0%,#27AE60 100%)`,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{background:"#fff",borderRadius:20,padding:"44px 40px",width:400,boxShadow:"0 24px 64px rgba(0,0,0,0.35)"}}>
-      <div style={{textAlign:"center",marginBottom:28}}><Logo size={56} color="#27AE60" url={logoUrl}/><div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:T.navy,marginTop:10}}>CareTrack Live</div><div style={{fontSize:12,color:T.grey,marginTop:4}}>Case Management Platform for NGOs, schools, and corporations.</div></div>
+      <div style={{textAlign:"center",marginBottom:28}}><Logo size={56} color="#27AE60" url={logoUrl}/><div style={{fontFamily:"'Playfair Display',serif",fontSize:26,fontWeight:700,color:T.navy,marginTop:10}}>OGB App</div><div style={{fontSize:12,color:T.grey,marginTop:4}}>LYSBF · Community Youth Empowerment Programme</div></div>
       {err&&<div style={{background:T.redL,color:T.red,borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:14,textAlign:"center"}}>{err}</div>}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         <input placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)} type="email" onKeyDown={e=>e.key==="Enter"&&go()} style={{border:`1.5px solid ${T.greyM}`,borderRadius:10,padding:"12px 16px",fontSize:14,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,width:"100%"}}/>
@@ -348,7 +348,7 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
   const G=({label,icon,open,setOpen,children})=>(<><div className="nav-item" onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderRadius:8,cursor:"pointer",color:"rgba(255,255,255,0.82)",fontSize:13,marginBottom:2,transition:"all 0.18s",fontFamily:"'Source Sans 3',sans-serif",whiteSpace:"nowrap"}}><span style={{display:"flex",alignItems:"center",gap:9}}><span style={{fontSize:17,minWidth:20,textAlign:"center"}}>{icon}</span><span>{label}</span></span><span style={{fontSize:10,opacity:0.6}}>{open?"▲":"▼"}</span></div>{open&&children}</>);
   return(<div className="no-print sidebar-transition" style={{width:isOpen?248:0,minHeight:"100vh",background:`linear-gradient(180deg,#1E8449 0%,#27AE60 100%)`,display:"flex",flexDirection:"column",flexShrink:0,position:"fixed",top:0,left:0,bottom:0,zIndex:100,overflowX:"hidden",overflowY:isOpen?"auto":"hidden"}}>
     <div style={{width:248,display:"flex",flexDirection:"column",flex:1}}>
-      <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>CareTrack Live</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>caretrackghana.com</div></div><button onClick={onToggle} aria-label="Collapse sidebar" style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.12)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"rgba(255,255,255,0.7)",fontSize:13}}>←</button></div></div>
+      <div style={{padding:"22px 18px 16px",borderBottom:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Logo size={36} color="#fff" url={logoUrl}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>OGB App</div><div style={{fontSize:9,color:"rgba(255,255,255,0.55)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>LYSBF · CYEP</div></div><button onClick={onToggle} aria-label="Collapse sidebar" style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.12)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:"rgba(255,255,255,0.7)",fontSize:13}}>←</button></div></div>
       <div style={{padding:"14px 10px",flex:1}}>
         <NI label="Dashboard" icon="🏠" p="dashboard"/>
         {user.role!=="Management"&&<G label="Beneficiaries" icon="👨‍👩‍👧‍👦" open={benOpen} setOpen={setBen}><NI label="List" icon="📋" p="ben-list" sub/>{user.role!=="Management"&&<NI label="Add" icon="➕" p="ben-add" sub/>}</G>}
@@ -476,6 +476,8 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
   const vis=baseBens
     .filter(b=>(!search||b.name?.toLowerCase().includes(search.toLowerCase())||b.bid?.includes(search))&&(compF==="all"||b.component_id===Number(compF))&&(commF==="all"||b.region===commF)&&(statF==="all"||b.status===statF)&&(gendF==="all"||b.gender===gendF)&&(!overdueF||(!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000))&&(yearF==="all"||b.enroll_date?.slice(0,4)===yearF)&&(quarterF==="all"||getQuarter(b.enroll_date)===quarterF)&&(officerF==="all"||b.assigned_to===officerF))
     .sort((a,b2)=>{if(sort==="name-asc")return(a.name||"").localeCompare(b2.name||"");if(sort==="name-desc")return(b2.name||"").localeCompare(a.name||"");if(sort==="updated-desc")return(b2.last_follow_up||"").localeCompare(a.last_follow_up||"");return 0;});
+  const [view,setView]=useState(()=>localStorage.getItem("benListView")||"list");
+  function switchView(v){setView(v);localStorage.setItem("benListView",v);}
   const comp=id=>COMPONENTS.find(c=>c.id===id);
   const officer=id=>users.find(u=>u.id===id)?.name||"Unassigned";
   const enrollTag=yearF!=="all"||quarterF!=="all"?[yearF!=="all"?yearF:null,quarterF!=="all"?quarterF:null].filter(Boolean).join(" · "):null;
@@ -489,7 +491,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
       "Community":b.community||"",
       "District":b.district||"",
       "Region":b.region||"",
-      "Programme Component":COMPONENTS.find(c=>c.id===b.component_id)?.name||"",
+      "Department":COMPONENTS.find(c=>c.id===b.component_id)?.name||"",
       "Enrolment Date":b.enroll_date||"",
       "Status":b.status||"",
       "Assigned Officer":users.find(u=>u.id===b.assigned_to)?.name||"",
@@ -514,11 +516,18 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
           <div style={{fontSize:13,color:T.grey}}>{vis.length} {vis.length===1?"record":"records"} {(overdueF||enrollTag)?"(filtered)":""}</div>
-          <button onClick={exportToExcel} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 16px",borderRadius:8,background:"#1D6F42",color:"#fff",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Source Sans 3',sans-serif"}}>📊 Export to Excel</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {/* View toggle */}
+            <div style={{display:"flex",border:`1px solid ${T.greyM}`,borderRadius:8,overflow:"hidden"}}>
+              <button onClick={()=>switchView("list")} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:view==="list"?"#27AE60":"#fff",color:view==="list"?"#fff":T.grey}}>☰ List</button>
+              <button onClick={()=>switchView("card")} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:view==="card"?"#27AE60":"#fff",color:view==="card"?"#fff":T.grey}}>⊞ Card</button>
+            </div>
+            <button onClick={exportToExcel} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 16px",borderRadius:8,background:"#1D6F42",color:"#fff",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Source Sans 3',sans-serif"}}>📊 Export to Excel</button>
+          </div>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"flex-end"}}>
           <div style={{flex:"1 1 180px"}}><Lbl c="Search"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Name or ID..." style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/></div>
-          <div style={{flex:"1 1 150px"}}><Lbl c="Component"/><select value={compF} onChange={e=>setCompF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Components</option>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
+          <div style={{flex:"1 1 150px"}}><Lbl c="Department"/><select value={compF} onChange={e=>setCompF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Components</option>{COMPONENTS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
           <div style={{flex:"1 1 130px"}}><Lbl c="Region"/><select value={commF} onChange={e=>setCommF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All Regions</option>{regions.map(r=><option key={r}>{r}</option>)}</select></div>
           <div style={{flex:"1 1 110px"}}><Lbl c="Status"/><select value={statF} onChange={e=>setStatF(e.target.value)} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}><option value="all">All</option><option>Active</option><option>Completed</option><option>On Hold</option></select></div>
           <div style={{width:1,height:36,background:T.greyM,alignSelf:"flex-end",marginBottom:1}}/>
@@ -533,17 +542,35 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
           <div style={{fontSize:12,color:T.grey}}>Showing <strong>{vis.length}</strong> records</div>
         </div>
       </div>
-      <div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
+      {/* Card view */}
+      {view==="card"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16}}>
+        {vis.length===0&&<div style={{gridColumn:"1/-1",padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</div>}
+        {vis.map(b=>{const c=comp(b.component_id);const lastFU=b.last_follow_up?new Date(b.last_follow_up).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"}):"Not yet";const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;
+          return(<div key={b.id} style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyL}`,display:"flex",flexDirection:"column",alignItems:"center",padding:"20px 16px 14px"}}>
+            <BenAvatar ben={b} size={64} fontSize={22}/>
+            <div style={{fontWeight:700,fontSize:13,color:T.navy,marginTop:10,textAlign:"center"}}>{b.name}</div>
+            <div style={{fontSize:11,color:T.grey}}>Age: {b.age||"—"} · {b.gender}</div>
+            {c&&<span style={{background:c.light,color:c.color,padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700,marginTop:6,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.match(/\(([^)]+)\)/)?.[1]||c.name.split(" ")[0]}</span></span>}
+            <div style={{fontSize:10,color:overdue?"#C0392B":"#7D6608",fontWeight:600,marginTop:5,textAlign:"center"}}>LAST FOLLOW-UP: {lastFU}</div>
+            <div style={{marginTop:10,display:"flex",gap:5,justifyContent:"center",borderTop:`1px solid ${T.greyL}`,paddingTop:10,width:"100%"}}>
+              <button onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
+              {(user.role==="Admin"||user.role==="Programme Coordinator"||b.assigned_to===user.id)&&user.role!=="Management"&&<button onClick={()=>onEdit(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EAFAF1",color:"#1D8348"}}>✏️ Edit</button>}
+              <button onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
+            </div>
+          </div>);
+        })}
+      </div>}
+      {/* List view */}
+      {view==="list"&&<div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Component","Community","Assigned Officer","Follow-Ups","Last Follow-Up","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Department","Community","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
           <tbody>
-            {vis.map((b,i)=>{const c=comp(b.component_id);const fuCount=(b.posts||[]).length;const fuBg=fuCount===0?"#FDEDEC":fuCount<=3?"#FEF9E7":"#EAFAF1";const fuColor=fuCount===0?"#922B21":fuCount<=3?"#7D6608":"#1D8348";return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
-              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={b} size={38} fontSize={13}/><div><div style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</div><div style={{fontSize:11,color:T.grey}}>Age {b.age} · {b.gender} · {b.bid}</div></div></div></td>
-              <td style={{padding:"13px 16px"}}>{c&&<span style={{background:c.light,color:c.color,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.split(" ")[0]}</span></span>}</td>
+            {vis.map((b,i)=>{const c=comp(b.component_id);const lastFU=b.last_follow_up?new Date(b.last_follow_up).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"}):"Not yet";const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
+              {/* Beneficiary - stacked Age and Gender */}
+              <td style={{padding:"13px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><BenAvatar ben={b} size={38} fontSize={13}/><div><div style={{fontWeight:700,fontSize:13,color:T.navy}}>{b.name}</div><div style={{fontSize:11,color:T.grey}}>Age: {b.age||"—"}</div><div style={{fontSize:11,color:T.grey}}>{b.gender}</div><div style={{fontSize:10,color:T.slate}}>{b.bid}</div></div></div></td>
+              {/* Department - short code + last follow-up below */}
+              <td style={{padding:"13px 16px"}}>{c&&<div><span style={{background:c.light,color:c.color,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.match(/\(([^)]+)\)/)?.[1]||c.name.split(" ")[0]}</span></span><div style={{fontSize:10,color:overdue?"#C0392B":"#7D6608",fontWeight:600,marginTop:4}}>LAST FOLLOW-UP: {lastFU}</div></div>}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{b.community}</td>
-              <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{officer(b.assigned_to)}</td>
-              <td style={{padding:"13px 16px"}}><span style={{background:fuBg,color:fuColor,padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-block"}}>💬 {fuCount} {fuCount===1?"visit":"visits"}</span></td>
-              {(()=>{const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;return(<td style={{padding:"13px 16px"}}><span style={{fontSize:12,fontWeight:600,color:overdue?"#fff":T.navy,background:overdue?"#C0392B":"transparent",padding:overdue?"3px 10px":"0",borderRadius:overdue?20:0,display:"inline-block"}}>{b.last_follow_up||"Not yet"}</span></td>);})()}
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
                 <button className="action-btn" onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
@@ -551,10 +578,10 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
                 <button className="action-btn" onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
               </div></td>
             </tr>);})}
-            {vis.length===0&&<tr><td colSpan={8} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
+            {vis.length===0&&<tr><td colSpan={5} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   </div>);
 }
@@ -811,7 +838,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
           </div>
           <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
             {tab==="basic"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Full Name",localBen.name],["Date of Birth",localBen.dob],["Age",localBen.age],["Gender",localBen.gender],["Nationality",localBen.nationality],["Tribe",localBen.tribe],["Religion",localBen.religion],["Community",localBen.community],["Address",localBen.address],["Region",localBen.region],["District",localBen.district],["City",localBen.city]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
-            {tab==="programme"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Beneficiary ID",localBen.bid],["Component",`${comp?.icon} ${comp?.name}`],["Enrolment Date",localBen.enroll_date],["Status",localBen.status]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
+            {tab==="programme"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Beneficiary ID",localBen.bid],["Department",`${comp?.icon} ${comp?.name}`],["Enrolment Date",localBen.enroll_date],["Status",localBen.status]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="health"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Vulnerability on Arrival",localBen.vuln_on_arrival],["Health Status",localBen.health],["Height",localBen.height],["Weight",localBen.weight],["Ghana Card / NHIS",localBen.ghana_card],["Disability",localBen.disability],["Medical Condition",localBen.med_condition]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="education"&&<div><Lbl c="Educational Level"/><FBox v={localBen.education}/></div>}
             {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={localBen.family}/></div>}
@@ -989,13 +1016,13 @@ function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
         <div style={{textAlign:"center",borderBottom:`2px solid ${T.navy}`,paddingBottom:20,marginBottom:24}}>
           {ben.photo_url&&<img src={ben.photo_url} alt={ben.name} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.navy}`,marginBottom:12,display:"block",margin:"0 auto 12px"}}/>}
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>CARETRACK GHANA</div>
-          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Sample Programme Component</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>LAWYER YAW SARPONG BOATENG FOUNDATION</div>
+          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Community Youth Empowerment Programme (CYEP)</div>
           <div style={{fontSize:16,fontWeight:700,color:"#27AE60",marginTop:10,textTransform:"uppercase",letterSpacing:2}}>Social Inquiry Report</div>
           <div style={{fontSize:12,color:T.grey,marginTop:4}}>Confidential Document — For Official Use Only</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:24,padding:"12px 16px",background:T.off,borderRadius:8}}>
-          {[["Report Date",today()],["Beneficiary ID",ben.bid],["Component",`${comp?.icon} ${comp?.name}`],["Officer",officer?.name||"—"],["Status",ben.status],["Enrolled",ben.enroll_date]].map(([l,v])=>(<div key={l} style={{fontSize:12}}><span style={{color:T.grey,fontWeight:700}}>{l}: </span><span style={{color:T.navy}}>{v}</span></div>))}
+          {[["Report Date",today()],["Beneficiary ID",ben.bid],["Department",`${comp?.icon} ${comp?.name}`],["Officer",officer?.name||"—"],["Status",ben.status],["Enrolled",ben.enroll_date]].map(([l,v])=>(<div key={l} style={{fontSize:12}}><span style={{color:T.grey,fontWeight:700}}>{l}: </span><span style={{color:T.navy}}>{v}</span></div>))}
         </div>
         {[{title:"1. Basic Demographic Information",fields:[["Full Name",ben.name],["Date of Birth",ben.dob],["Age",ben.age],["Gender",ben.gender],["Nationality",ben.nationality],["Tribe / Ethnicity",ben.tribe],["Religion",ben.religion],["Region",ben.region],["District",ben.district],["City / Village",ben.city],["Area / Suburb",ben.area],["Physical Location",ben.physical_desc]]},
           {title:"2. Family Background",single:ben.family},{title:"3. Background Information",single:ben.background},
@@ -1013,7 +1040,7 @@ function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
         <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${T.greyM}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
           {["Prepared by (Programme Officer)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
         </div>
-        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>CareTrack Ghana · Confidential · {today()}</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>LYSBF CYEP · Confidential · {today()}</div>
       </div>
     </div>
   </div>);
@@ -1059,7 +1086,7 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,commu
       <div style={{background:"#fff",borderRadius:12,padding:"28px 32px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Basic Demographics</SH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:28}}>
-          <FI label="Beneficiary ID" value={f.bid} onChange={v=>s("bid",v)} placeholder="e.g. CT-001"/>
+          <FI label="Beneficiary ID" value={f.bid} onChange={v=>s("bid",v)} placeholder="e.g. LYSBF-009"/>
           <FI label="Full Name *" value={f.name} onChange={v=>s("name",v)}/>
           <FI label="Date of Birth" value={f.dob} onChange={handleDob} type="date"/>
           <FI label="Age" value={f.age} onChange={v=>s("age",v)} type="number"/>
@@ -1075,7 +1102,7 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,commu
         </div>
         <SH>Programme Details</SH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:28}}>
-          <FI label="Programme Component" value={String(f.component_id)} onChange={v=>s("component_id",Number(v))} options={COMPONENTS.map(c=>({value:String(c.id),label:`${c.icon} ${c.name}`}))}/>
+          <FI label="Department" value={String(f.component_id)} onChange={v=>s("component_id",Number(v))} options={COMPONENTS.map(c=>({value:String(c.id),label:`${c.icon} ${c.name}`}))}/>
           <FI label="Status" value={f.status} onChange={v=>s("status",v)} options={["Active","Completed","On Hold"]}/>
           <FI label="Enrolment Date" value={f.enroll_date} onChange={v=>s("enroll_date",v)} type="date"/>
           {canAssign&&myOfficers.length>0&&<FI label="Assign to Officer" value={String(f.assigned_to)} onChange={v=>s("assigned_to",v)} options={[{value:user.id,label:`Me (${user.role})`},...myOfficers.map(u=>({value:u.id,label:u.name}))]}/>}
@@ -1852,7 +1879,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       // bucket) so the sign-in page can display it before anyone logs in.
       const{error:upErr}=await supabase.storage.from(BRAND_BUCKET).upload(storagePath,file,{upsert:true,contentType:file.type});
       if(upErr){setLogoMsg("❌ Upload failed: "+upErr.message);setLogoBusy(false);return;}
-      const{data:urlData}=supabase.storage.from(BRAND_BUCKET).getPublicUrl(storagePath);
+      const{data:urlData}=supabase.storage.from(BRAND_BUCKET).getPublicUrl(path);
       const publicUrl=urlData.publicUrl+"?t="+Date.now();
       await supabase.from("settings").upsert({key:"logo_url",value:publicUrl},{onConflict:"key"});
       setLogoUrl(publicUrl);
@@ -1871,23 +1898,26 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
     <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>App Logo</SH>
-        <div style={{border:`1px solid ${T.greyL}`,borderRadius:12,padding:"28px",textAlign:"center",background:T.off,marginBottom:14}}>
-          {logoUrl?<img src={logoUrl} alt="CareTrack Ghana Logo" style={{width:120,height:120,objectFit:"contain"}}/>:<div style={{fontSize:13,color:T.grey}}>No logo configured.</div>}
+        {logoMsg&&<div style={{background:logoMsg.includes("✅")?"#EAFAF1":"#FDEDEC",color:logoMsg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"9px 13px",fontSize:12,marginBottom:12}}>{logoMsg}</div>}
+        <div style={{border:`2px dashed ${T.greyM}`,borderRadius:12,padding:"28px",textAlign:"center",background:T.off,marginBottom:14,cursor:user.role==="Management"?"default":"pointer"}} onClick={()=>user.role!=="Management"&&!logoBusy&&fileRef.current.click()}>
+          {logoUrl?<img src={logoUrl} alt="logo" style={{width:80,height:80,objectFit:"contain"}}/>:<div><div style={{fontSize:40,marginBottom:8}}>📷</div><div style={{fontSize:13,color:T.grey}}>{logoBusy?"Uploading...":user.role==="Management"?"No logo uploaded yet":"Click to upload your logo"}</div></div>}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleLogo}/>
         </div>
-        <div style={{fontSize:11,color:T.grey,fontStyle:"italic"}}>Logo is managed by CareTrack Ghana.</div>
+        {user.role!=="Management"&&<div style={{display:"flex",gap:10}}><Btn variant="primary" onClick={()=>!logoBusy&&fileRef.current.click()}>📷 Upload Logo</Btn>{logoUrl&&<Btn variant="secondary" onClick={removeLogo}>Remove</Btn>}</div>}
+        {user.role==="Management"&&<div style={{fontSize:11,color:T.grey,fontStyle:"italic"}}>Logo upload is managed by the Administrator.</div>}
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <SH>Official Website</SH>
         <div style={{background:`linear-gradient(135deg,#1A252F,#27AE60)`,borderRadius:12,padding:"24px",textAlign:"center",color:"#fff"}}>
           <div style={{fontSize:32,marginBottom:8}}>🌐</div>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,marginBottom:4}}>CareTrack Ghana Official Website</div>
-          <div style={{fontSize:12,opacity:0.75,marginBottom:16}}>caretrackghana.com</div>
-          <a href="https://caretrackghana.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:"#E74C3C",color:"#fff",padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:700,marginBottom:4}}>LYSBF Official Website</div>
+          <div style={{fontSize:12,opacity:0.75,marginBottom:16}}>lysbfoundation.com</div>
+          <a href="https://lysbfoundation.com/" target="_blank" rel="noreferrer" style={{display:"inline-block",background:"#E74C3C",color:"#fff",padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,textDecoration:"none"}}>Visit Website ↗</a>
         </div>
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.8.3"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.8.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -1960,7 +1990,7 @@ export default function App(){
   const [user,setUser]=useState(null);const [loading,setLoading]=useState(true);const [page,setPage]=useState("dashboard");
   const [bens,setBens]=useState([]);const [users,setUsers]=useState([]);
   const [viewBen,setView]=useState(null);const [editBen,setEdit]=useState(null);const [sirBen,setSir]=useState(null);const [plannerTarget,setPlannerTarget]=useState(null);
-  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState("https://hdcsjkptswmsjgcsqzki.supabase.co/storage/v1/object/public/app-branding/app-logo/logo.png");const [dashFilter,setDashFilter]=useState({});
+  const [postModal,setPost]=useState(null);const [logoUrl,setLogoUrl]=useState(null);const [dashFilter,setDashFilter]=useState({});
   const [sidebarOpen,setSidebarOpen]=useState(true);const [recovery,setRecovery]=useState(false);
 
   useEffect(()=>{
@@ -2127,7 +2157,7 @@ export default function App(){
 
   if(loading)return(<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.off,flexDirection:"column",gap:16}}>
     <div className="spin" style={{width:44,height:44,border:`4px solid ${T.greyM}`,borderTopColor:"#27AE60",borderRadius:"50%"}}/>
-    <div style={{color:T.grey,fontSize:14}}>Loading CareTrack Live...</div>
+    <div style={{color:T.grey,fontSize:14}}>Loading OGB App...</div>
   </div>);
 
   if(recovery)return <ResetPassword logoUrl={logoUrl} onDone={()=>{setRecovery(false);setUser(null);setBens([]);try{sessionStorage.removeItem("ogb_user");}catch(e){}window.history.replaceState({},"","/");}}/>;
