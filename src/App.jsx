@@ -116,13 +116,13 @@ const CSS=`
 const T={white:"#FFFFFF",navy:"#1A252F",slate:"#2A4365",green:"#27AE60",off:"#F7FAFC",grey:"#718096",greyL:"#EDF2F7",greyM:"#CBD5E0",red:"#C0392B",redL:"#FDEDEC"};
 
 const COMPONENTS=[
-  {id:1,name:"Sports for Development",icon:"🏃",color:"#E74C3C",light:"#FDEDEC"},
-  {id:2,name:"Youth Leadership & Mentorship",icon:"🤝",color:"#2980B9",light:"#EBF5FB"},
-  {id:3,name:"Entrepreneurship & Skills Development",icon:"🛠️",color:"#F39C12",light:"#FEF9E7"},
-  {id:4,name:"Education Support",icon:"📚",color:"#27AE60",light:"#EAFAF1"},
-  {id:5,name:"Health & Wellness",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
-  {id:6,name:"Disability Inclusion & Social Protection",icon:"🫂",color:"#8E44AD",light:"#F5EEF8"},
-  {id:7,name:"Environmental Sanitation & Community Service",icon:"♻️",color:"#16A085",light:"#E8F8F5"},
+  {id:1,name:"Education Support (ES)",shortCode:"ES",fullName:"Education Support",icon:"📚",color:"#E74C3C",light:"#FDEDEC"},
+  {id:2,name:"Children in the Family (CIF)",shortCode:"CIF",fullName:"Children in the Family",icon:"👨‍👩‍👧",color:"#2980B9",light:"#EBF5FB"},
+  {id:3,name:"Residential Home (RH)",shortCode:"RH",fullName:"Residential Home",icon:"🏠",color:"#F39C12",light:"#FEF9E7"},
+  {id:4,name:"Drop-In Centre (DIC)",shortCode:"DIC",fullName:"Drop-In Centre",icon:"🚪",color:"#27AE60",light:"#EAFAF1"},
+  {id:5,name:"Health & Wellness (HW)",shortCode:"HW",fullName:"Health & Wellness",icon:"🏥",color:"#E67E22",light:"#FEF5E7"},
+  {id:6,name:"Technical and Vocational Education and Training (TVET)",shortCode:"TVET",fullName:"Technical & Vocational Training",icon:"👷",color:"#8E44AD",light:"#F5EEF8"},
+  {id:7,name:"Street Work (SW)",shortCode:"SW",fullName:"Street Work",icon:"👟",color:"#16A085",light:"#E8F8F5"},
 ];
 
 const STAT_CARDS=[
@@ -407,8 +407,9 @@ function Dashboard({bens,user,users,onNavigate,onToggle,onNavigateToBen}){
           const malePct=count>0?Math.round((males/count)*100):0;
           return(
           <div key={c.id} className="card-hover" onClick={()=>handleStatClick({comp:c.id})} style={{background:c.color,borderRadius:16,padding:"32px 20px 20px",textAlign:"center",cursor:"pointer",transition:"all 0.22s",boxShadow:"0 6px 20px rgba(0,0,0,0.18)"}}>
-            <div style={{width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:28}}>{c.icon}</div>
-            <div style={{fontSize:13,color:"rgba(255,255,255,0.92)",fontWeight:700,marginBottom:16,lineHeight:1.4}}>{c.name}</div>
+            <div style={{width:60,height:60,borderRadius:"50%",background:"rgba(255,255,255,0.20)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 10px",fontSize:28}}>{c.icon}</div>
+            <div style={{fontSize:26,fontWeight:900,color:"#fff",letterSpacing:2,marginBottom:2,lineHeight:1}}>{c.shortCode}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.85)",fontWeight:400,marginBottom:12,lineHeight:1.3}}>{c.fullName}</div>
             <div style={{fontSize:56,fontWeight:800,color:"#fff",lineHeight:1,fontFamily:"'Playfair Display',serif"}}>{count}</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.78)",marginTop:8,textTransform:"uppercase",letterSpacing:1.2,fontWeight:600,marginBottom:14}}>Total Beneficiaries</div>
             {count>0&&(<>
@@ -563,7 +564,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
       {/* List view */}
       {view==="list"&&<div style={{background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{["Beneficiary","Department","Community","Status","Actions"].map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
+          <thead><tr style={{background:T.off,borderBottom:`2px solid ${T.greyM}`}}>{(user.role==="Programme Officer"?["Beneficiary","Department","Community","Status","Actions"]:["Beneficiary","Department","Community","Assigned Officer","Status","Actions"]).map(h=><th key={h} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:T.slate,textTransform:"uppercase",letterSpacing:0.8}}>{h}</th>)}</tr></thead>
           <tbody>
             {vis.map((b,i)=>{const c=comp(b.component_id);const lastFU=b.last_follow_up?new Date(b.last_follow_up).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"}):"Not yet";const overdue=!b.last_follow_up||(new Date()-new Date(b.last_follow_up))>90*24*60*60*1000;return(<tr key={b.id} className="row-hover" style={{background:i%2===0?"#fff":T.off,borderBottom:`1px solid ${T.greyL}`,transition:"background 0.15s"}}>
               {/* Beneficiary - stacked Age and Gender */}
@@ -571,6 +572,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
               {/* Department - short code + last follow-up below */}
               <td style={{padding:"13px 16px"}}>{c&&<div><span style={{background:c.light,color:c.color,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",gap:4}}><span>{c.icon}</span><span>{c.name.match(/\(([^)]+)\)/)?.[1]||c.name.split(" ")[0]}</span></span><div style={{fontSize:10,color:overdue?"#C0392B":"#7D6608",fontWeight:600,marginTop:4}}>LAST FOLLOW-UP: {lastFU}</div></div>}</td>
               <td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{b.community}</td>
+              {user.role!=="Programme Officer"&&<td style={{padding:"13px 16px",fontSize:12,color:T.navy}}>{users.find(u=>u.id===b.assigned_to)?.name||"—"}</td>}
               <td style={{padding:"13px 16px"}}><Pill s={b.status}/></td>
               <td style={{padding:"13px 16px"}}><div style={{display:"flex",gap:5}}>
                 <button className="action-btn" onClick={()=>onView(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#EBF5FB",color:"#1A5276"}}>👁 View</button>
@@ -578,7 +580,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
                 <button className="action-btn" onClick={()=>onSIR(b)} style={{padding:"5px 11px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:"#FEF9E7",color:"#9A7D0A"}}>📋 SIR</button>
               </div></td>
             </tr>);})}
-            {vis.length===0&&<tr><td colSpan={5} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
+            {vis.length===0&&<tr><td colSpan={user.role==="Programme Officer"?5:6} style={{padding:44,textAlign:"center",color:T.grey,fontSize:14}}>No beneficiaries found.</td></tr>}
           </tbody>
         </table>
       </div>}
@@ -1917,7 +1919,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       </div>
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","OGB App"],["Version","2.8.4"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","OGB App"],["Version","2.8.5"],["Organisation","LYSBF · CYEP"],["Region","Eastern Region, Ghana"],["Contact","info@lysbfoundation.com"],["Phone","+233 050 026 4315"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
