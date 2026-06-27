@@ -673,15 +673,21 @@ function FollowUpsTab({ben,user,users,onAddPost}){
   const [comments,setComments]=useState({});
   const [newComment,setNewComment]=useState({});
   const [loading,setLoading]=useState({});
+  const [approving,setApproving]=useState({});
+  const [revisionNote,setRevisionNote]=useState({});
+  const [showRevision,setShowRevision]=useState({});
+  const [posts,setPosts]=useState(ben.posts||[]);
+
+  useEffect(()=>{setPosts(ben.posts||[]);},[ben.posts]);
+
   useEffect(()=>{
-    if(!ben.posts||ben.posts.length===0)return;
-    ben.posts.forEach(async p=>{
+    if(!posts||posts.length===0)return;
+    posts.forEach(async p=>{
       const{data}=await supabase.from("comments").select("*").eq("post_id",p.id).order("created_at");
       if(data)setComments(c=>({...c,[p.id]:data}));
     });
-  },[ben.posts]);
+  },[posts]);
 
-  // Reliably find coordinator: first from officer's coordinator_id, fallback to ben.coordinator_id
   function getCoordinatorId(){
     if(ben.assigned_to&&users){
       const officer=users.find(u=>u.id===ben.assigned_to);
@@ -689,6 +695,18 @@ function FollowUpsTab({ben,user,users,onAddPost}){
     }
     return ben.coordinator_id||null;
   }
+
+  const coordId=getCoordinatorId();
+  const isCoordinator=user.role==="Programme Coordinator"&&user.id===coordId;
+  const isOfficer=user.id===ben.assigned_to;
+  const isAdmin=user.role==="Admin";
+
+  // Filter posts based on approval status and role
+  const visiblePosts=[...posts].reverse().filter(p=>{
+    if(p.approval_status==="Approved")return true; // Everyone sees approved
+    // Pending/Needs Revision — only officer, coordinator, admin
+    return isOfficer||isCoordinator||isAdmin;
+  });
 
   async function submitComment(postId){
     const text=newComment[postId];if(!text||!text.trim())return;
@@ -698,48 +716,156 @@ function FollowUpsTab({ben,user,users,onAddPost}){
       setComments(c=>({...c,[postId]:[...(c[postId]||[]),data]}));
       setNewComment(n=>({...n,[postId]:""}));
       const preview=`"${text.slice(0,60)}${text.length>60?"...":""}"`;
-      const coordId=getCoordinatorId();
       if(user.role==="Programme Coordinator"||user.role==="Admin"){
-        // Coordinator/Admin commented — notify the assigned officer
         if(ben.assigned_to&&ben.assigned_to!==user.id){
-          await createNotification(
-            ben.assigned_to,"comment",
-            `Comment on ${ben.name}'s case`,
-            `${user.name} (${roleDisplay(user.role)}) commented: ${preview}`,
-            ben.id,postId
-          );
+          await createNotification(ben.assigned_to,"comment",`Comment on ${ben.name}'s case`,`${user.name} (${roleDisplay(user.role)}) commented: ${preview}`,ben.id,postId);
         }
       } else if(user.role==="Programme Officer"){
-        // Officer replied — notify their coordinator
         if(coordId&&coordId!==user.id){
-          await createNotification(
-            coordId,"comment",
-            `Officer reply on ${ben.name}'s case`,
-            `${user.name} replied: ${preview}`,
-            ben.id,postId
-          );
+          await createNotification(coordId,"comment",`Social Worker reply on ${ben.name}'s case`,`${user.name} replied: ${preview}`,ben.id,postId);
         }
       }
     }
     setLoading(l=>({...l,[postId]:false}));
   }
+
+  async function approvePost(p){
+    setApproving(a=>({...a,[p.id]:true}));
+    const now=new Date().toISOString();
+    const{data}=await supabase.from("posts").update({
+      approval_status:"Approved",
+      approved_by:user.id,
+      approved_by_name:user.name,
+      approved_at:now
+    }).eq("id",p.id).select().single();
+    if(data){
+      setPosts(ps=>ps.map(x=>x.id===p.id?{...x,...data}:x));
+      // Notify the social worker
+      if(ben.assigned_to&&ben.assigned_to!==user.id){
+        await createNotification(ben.assigned_to,"follow_up",`Follow-up approved: ${ben.name}`,`${user.name} approved your follow-up note for ${ben.name}.`,ben.id,p.id);
+      }
+    }
+    setApproving(a=>({...a,[p.id]:false}));
+  }
+
+  async function requestRevision(p){
+    const note=revisionNote[p.id];
+    if(!note||!note.trim()){setShowRevision(s=>({...s,[p.id]:true}));return;}
+    setApproving(a=>({...a,[p.id]:true}));
+    const{data}=await supabase.from("posts").update({
+      approval_status:"Needs Revision",
+      revision_note:note.trim()
+    }).eq("id",p.id).select().single();
+    if(data){
+      setPosts(ps=>ps.map(x=>x.id===p.id?{...x,...data}:x));
+      setShowRevision(s=>({...s,[p.id]:false}));
+      setRevisionNote(r=>({...r,[p.id]:""}));
+      if(ben.assigned_to&&ben.assigned_to!==user.id){
+        await createNotification(ben.assigned_to,"follow_up",`Revision needed: ${ben.name}`,`${user.name} requested revision: "${note.slice(0,60)}${note.length>60?"...":""}"`,ben.id,p.id);
+      }
+    }
+    setApproving(a=>({...a,[p.id]:false}));
+  }
+
+  async function editPost(p,newText){
+    const{data}=await supabase.from("posts").update({text:newText,approval_status:"Pending",revision_note:null}).eq("id",p.id).select().single();
+    if(data){
+      setPosts(ps=>ps.map(x=>x.id===p.id?{...x,...data}:x));
+      // Notify coordinator that post was resubmitted
+      if(coordId&&coordId!==user.id){
+        await createNotification(coordId,"follow_up",`Follow-up resubmitted: ${ben.name}`,`${user.name} has revised and resubmitted their follow-up note for ${ben.name}.`,ben.id,p.id);
+      }
+    }
+  }
+
+  function statusBadge(p){
+    if(p.approval_status==="Approved")return{bg:"#EAFAF1",color:"#1D8348",icon:"✅",label:"Approved"};
+    if(p.approval_status==="Needs Revision")return{bg:"#FEF5E7",color:"#E67E22",icon:"⚠️",label:"Needs Revision"};
+    return{bg:"#EBF5FB",color:"#1A5276",icon:"⏳",label:"Pending Review"};
+  }
+
+  function fmtDate(str){if(!str)return"";return new Date(str).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+
   return(<div>
-    {(user.role==="Admin"||user.role==="Programme Coordinator"||ben.assigned_to===user.id)&&user.role!=="Management"&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
-    {(!ben.posts||ben.posts.length===0)&&<div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
-    {(ben.posts||[]).slice().reverse().map(p=>(<div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`1px solid ${T.greyM}`}}>
-      <div style={{display:"flex",gap:10,marginBottom:12}}>
-        <div style={{width:36,height:36,borderRadius:"50%",background:aColor(p.author),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff",flexShrink:0}}>{inits(p.author)}</div>
-        <div style={{flex:1}}><div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.visit_date||p.date}{p.visit_type&&<span style={{marginLeft:8,background:"#EBF5FB",color:"#1A5276",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{VISIT_TYPES.find(v=>v.key===p.visit_type)?.icon||"📝"} {p.visit_type}</span>}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div></div>
-      </div>
-      {(comments[p.id]||[]).map(c=>(<div key={c.id} style={{display:"flex",gap:10,marginBottom:10,marginLeft:46,flexDirection:c.author_role==="Admin"?"row-reverse":"row"}}>
-        <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Admin"?"#1A252F":"#2980B9",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
-        <div style={{flex:1}}><div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Admin"?"right":"left"}}>{c.author} · {c.author_role}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Admin"?"#EAFAF1":"#fff",borderRadius:c.author_role==="Admin"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div></div>
-      </div>))}
-      {user.role!=="Management"&&<div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
-        <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)} placeholder="Write a comment or reply..." spellCheck="true" style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
-        <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
-      </div>}
-    </div>))}
+    {/* Add Follow-Up button — only for officer and coordinator, not when viewing approved */}
+    {(isOfficer||(user.role==="Admin"))&&user.role!=="Management"&&<Btn variant="primary" onClick={()=>onAddPost(ben)} style={{marginBottom:18}}>+ Add Follow-Up Note</Btn>}
+
+    {visiblePosts.length===0&&<div style={{color:T.grey,fontSize:13,textAlign:"center",padding:24}}>No follow-up notes yet.</div>}
+
+    {visiblePosts.map(p=>{
+      const badge=statusBadge(p);
+      const isApproved=p.approval_status==="Approved";
+      const needsRevision=p.approval_status==="Needs Revision";
+      const canEdit=isOfficer&&!isApproved;
+      const canApprove=isCoordinator&&!isApproved;
+
+      return(<div key={p.id} style={{background:T.off,borderRadius:12,padding:"16px",marginBottom:16,border:`2px solid ${isApproved?"#27AE60":needsRevision?"#E67E22":T.greyM}`}}>
+
+        {/* Status badge */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <span style={{background:badge.bg,color:badge.color,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>
+            {badge.icon} {badge.label}
+          </span>
+          {isApproved&&<div style={{fontSize:11,color:"#1D8348",fontStyle:"italic"}}>
+            Approved by {p.approved_by_name} on {fmtDate(p.approved_at)}
+          </div>}
+        </div>
+
+        {/* Needs Revision note */}
+        {needsRevision&&p.revision_note&&<div style={{background:"#FEF5E7",border:"1px solid #F0B27A",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#E67E22"}}>
+          ⚠️ <strong>Revision requested:</strong> {p.revision_note}
+        </div>}
+
+        {/* Post content */}
+        <div style={{display:"flex",gap:10,marginBottom:12}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:aColor(p.author),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,color:"#fff",flexShrink:0}}>{inits(p.author)}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,color:T.grey,marginBottom:4}}>✍️ {p.author} · 📅 {p.visit_date||p.date}{p.visit_type&&<span style={{marginLeft:8,background:"#EBF5FB",color:"#1A5276",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700}}>{VISIT_TYPES.find(v=>v.key===p.visit_type)?.icon||"📝"} {p.visit_type}</span>}</div>
+
+            {/* Editable text for officer when needs revision */}
+            {canEdit&&needsRevision
+              ?<textarea
+                  defaultValue={p.text}
+                  onBlur={e=>e.target.value!==p.text&&editPost(p,e.target.value)}
+                  spellCheck="true"
+                  style={{width:"100%",border:`1px solid #E67E22`,borderRadius:8,padding:"10px 14px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",lineHeight:1.6,color:T.navy,background:"#FEF5E7",resize:"vertical",minHeight:80}}
+                />
+              :<div style={{fontSize:13,color:T.navy,lineHeight:1.6,background:"#EBF5FB",borderRadius:"0 10px 10px 10px",padding:"10px 14px"}}>{p.text}</div>
+            }
+            {canEdit&&needsRevision&&<div style={{fontSize:11,color:T.grey,marginTop:4,fontStyle:"italic"}}>Edit your note above and click away to save. It will return to Pending status.</div>}
+          </div>
+        </div>
+
+        {/* Comments */}
+        {!isApproved&&(comments[p.id]||[]).map(c=>(<div key={c.id} style={{display:"flex",gap:10,marginBottom:10,marginLeft:46,flexDirection:c.author_role==="Programme Coordinator"?"row-reverse":"row"}}>
+          <div style={{width:30,height:30,borderRadius:"50%",background:c.author_role==="Programme Coordinator"?"#2980B9":"#27AE60",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:11,color:"#fff",flexShrink:0}}>{inits(c.author)}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:T.grey,marginBottom:3,textAlign:c.author_role==="Programme Coordinator"?"right":"left"}}>{c.author} · {roleDisplay(c.author_role)}</div>
+            <div style={{fontSize:13,color:T.navy,lineHeight:1.5,background:c.author_role==="Programme Coordinator"?"#EBF5FB":"#fff",borderRadius:c.author_role==="Programme Coordinator"?"10px 0 10px 10px":"0 10px 10px 10px",padding:"8px 12px",border:`1px solid ${T.greyM}`}}>{c.text}</div>
+          </div>
+        </div>))}
+
+        {/* Comment input — hidden when approved */}
+        {!isApproved&&user.role!=="Management"&&<div style={{marginLeft:46,marginTop:10,display:"flex",gap:8}}>
+          <input value={newComment[p.id]||""} onChange={e=>setNewComment(n=>({...n,[p.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&submitComment(p.id)} placeholder="Write a comment or reply..." spellCheck="true" style={{flex:1,border:`1px solid ${T.greyM}`,borderRadius:8,padding:"8px 12px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+          <button onClick={()=>submitComment(p.id)} disabled={loading[p.id]} style={{padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#2980B9",color:"#fff",opacity:loading[p.id]?0.6:1}}>{loading[p.id]?"...":"Send"}</button>
+        </div>}
+
+        {/* Coordinator approval actions */}
+        {canApprove&&<div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${T.greyL}`,display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-start"}}>
+          <button onClick={()=>approvePost(p)} disabled={approving[p.id]} style={{padding:"7px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#27AE60",color:"#fff",opacity:approving[p.id]?0.6:1}}>✅ Approve</button>
+          {!showRevision[p.id]
+            ?<button onClick={()=>setShowRevision(s=>({...s,[p.id]:true}))} style={{padding:"7px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#FEF5E7",color:"#E67E22"}}>⚠️ Request Revision</button>
+            :<div style={{display:"flex",gap:6,flex:1,flexWrap:"wrap"}}>
+              <input value={revisionNote[p.id]||""} onChange={e=>setRevisionNote(r=>({...r,[p.id]:e.target.value}))} placeholder="Describe what needs to change..." style={{flex:1,minWidth:180,border:`1px solid #E67E22`,borderRadius:8,padding:"7px 12px",fontSize:12,fontFamily:"'Source Sans 3',sans-serif",color:T.navy}}/>
+              <button onClick={()=>requestRevision(p)} style={{padding:"7px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:"#E67E22",color:"#fff"}}>Send</button>
+              <button onClick={()=>setShowRevision(s=>({...s,[p.id]:false}))} style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${T.greyM}`,cursor:"pointer",fontSize:12,background:"#fff",color:T.grey}}>Cancel</button>
+            </div>
+          }
+        </div>}
+
+      </div>);
+    })}
   </div>);
 }
 
@@ -2207,7 +2333,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       {/* App Information */}
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.9.3"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Live"],["Version","2.9.4"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -2419,14 +2545,19 @@ export default function App(){
   async function addPost(ben,text,author,visitDate,visitType){
     try{
       const followUpDate=visitDate||today();
-      const{data}=await supabase.from("posts").insert([{beneficiary_id:ben.id,author:author.name,text,date:followUpDate,visit_date:followUpDate,visit_type:visitType||""}]).select().single();
+      const{data}=await supabase.from("posts").insert([{
+        beneficiary_id:ben.id,
+        author:author.name,
+        text,
+        date:followUpDate,
+        visit_date:followUpDate,
+        visit_type:visitType||"",
+        approval_status:"Pending"
+      }]).select().single();
       if(data){
-        // Write last_follow_up back to beneficiaries table in Supabase
         await supabase.from("beneficiaries").update({last_follow_up:followUpDate}).eq("id",ben.id);
-        // Update local state
         setBens(bs=>bs.map(b=>b.id===ben.id?{...b,posts:[...(b.posts||[]),data],last_follow_up:followUpDate}:b));
         if(viewBen?.id===ben.id)setView(v=>({...v,posts:[...(v.posts||[]),data],last_follow_up:followUpDate}));
-        // Notify the coordinator of the assigned officer
         const officer=users.find(u=>u.id===ben.assigned_to);
         const coordId=officer?.coordinator_id||ben.coordinator_id;
         if(coordId&&coordId!==author.id){
@@ -2434,8 +2565,8 @@ export default function App(){
           if(coordUser){
             await createNotification(
               coordId,"follow_up",
-              `New follow-up: ${ben.name}`,
-              `${author.name} (Social Worker) logged a ${visitType||"follow-up"} visit${ben.name?" for "+ben.name:""}`,
+              `New follow-up pending review: ${ben.name}`,
+              `${author.name} submitted a follow-up note for ${ben.name}. Please review and approve.`,
               ben.id,data.id
             );
           }
