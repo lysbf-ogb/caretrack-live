@@ -364,9 +364,9 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
         {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
         {user.role==="Management"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Management</div><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="Staff Directory" icon="👥" p="staff-directory"/><NI label="About" icon="ℹ️" p="settings"/></>}
         {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Social Workers" icon="👥" p="my-officers"/><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
-        {user.role==="Programme Officer"&&<><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
+        {user.role==="Programme Officer"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Social Worker</div><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
       </div>
-      <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
+      <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{roleDisplay(user.role)}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
     </div>
   </div>);
 }
@@ -518,7 +518,7 @@ function BenList({bens,user,users,onView,onEdit,onSIR,initialFilter={},onToggle,
     <div style={{padding:"24px 32px"}}>
       {viewingOfficer&&<div style={{background:"#EBF5FB",border:"1px solid #AED6F1",borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{fontSize:13,color:"#1A5276"}}>👁️ Viewing cases for <strong>{viewingOfficer.name}</strong></div>
-        <button onClick={()=>setOfficerF("all")} style={{background:"none",border:"none",color:"#1A5276",cursor:"pointer",fontSize:12,fontWeight:700,textDecoration:"underline"}}>← Back to all my officers' cases</button>
+        <button onClick={()=>setOfficerF("all")} style={{background:"none",border:"none",color:"#1A5276",cursor:"pointer",fontSize:12,fontWeight:700,textDecoration:"underline"}}>← Back to all my social workers' cases</button>
       </div>}
       <div style={{background:"#fff",borderRadius:12,padding:"16px 20px",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:`1px solid ${T.greyM}`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:10}}>
@@ -1492,7 +1492,7 @@ function UserMgmt({users,setUsers,user,bens,onToggle,onNavigateToBen}){
     // Check if coordinator has active officers
     if(u.role==="Programme Coordinator"){
       const myOfficers=activeUsers.filter(o=>o.role==="Programme Officer"&&o.coordinator_id===u.id);
-      if(myOfficers.length>0){setMsg(`⚠️ ${u.name} supervises ${myOfficers.length} active officer${myOfficers.length===1?"":"s"}. Please reassign them to another coordinator before deactivating.`);return;}
+      if(myOfficers.length>0){setMsg(`⚠️ ${u.name} supervises ${myOfficers.length} active social worker${myOfficers.length===1?"":"s"}. Please reassign them to another coordinator before deactivating.`);return;}
     }
     // Block deactivating self
     if(u.id===user.id){setMsg("❌ You cannot deactivate your own account.");return;}
@@ -1665,7 +1665,7 @@ function MyOfficers({user,users,bens,onNavigate,onToggle,onNavigateToBen}){
   const myOfficers=users.filter(u=>u.role==="Programme Officer"&&u.coordinator_id===user.id&&u.status!=="Inactive");
   return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="My Social Workers" sub="Social workers under your supervision"/>
     <div style={{padding:"24px 32px"}}>
-      {myOfficers.length===0&&<div style={{background:"#fff",borderRadius:12,padding:32,textAlign:"center",color:T.grey,fontSize:14,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>No officers assigned to you yet. Ask an Admin to assign officers under your coordination.</div>}
+      {myOfficers.length===0&&<div style={{background:"#fff",borderRadius:12,padding:32,textAlign:"center",color:T.grey,fontSize:14,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>No social workers assigned to you yet. Ask an Admin to assign social workers under your coordination.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
         {myOfficers.map(officer=>{
           const myBens=bens.filter(b=>b.assigned_to===officer.id);
@@ -2053,7 +2053,7 @@ function OrgStructure({user,users,bens,onToggle,onNavigateToBen}){
       </div></>}
 
       {/* Coordinators and their officers */}
-      {coordinators.length>0&&<><SectionTitle label="Programme Coordinators & Their Officers" color="#6C3483" count={coordinators.length+" coordinators · "+officers.length+" officers"}/>
+      {coordinators.length>0&&<><SectionTitle label="Programme Coordinators & Their Social Workers" color="#6C3483" count={coordinators.length+" coordinators · "+officers.length+" social workers"}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:16}}>
         {coordinators.map(coord=>{
           const myOfficers=officers.filter(o=>o.coordinator_id===coord.id);
@@ -2072,7 +2072,7 @@ function OrgStructure({user,users,bens,onToggle,onNavigateToBen}){
                 <div style={{fontSize:9,color:T.grey,textTransform:"uppercase",letterSpacing:0.5}}>Total Cases</div>
               </div>
             </div>
-            {/* Officers under this coordinator */}
+            {/* Social Workers under this coordinator */}
             {myOfficers.length===0&&<div style={{fontSize:12,color:T.grey,textAlign:"center",padding:"8px 0"}}>No officers assigned</div>}
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               {myOfficers.map(o=>{
@@ -2093,7 +2093,7 @@ function OrgStructure({user,users,bens,onToggle,onNavigateToBen}){
 
       {/* Unassigned officers */}
       {officers.filter(o=>!o.coordinator_id).length>0&&<>
-        <SectionTitle label="Unassigned Officers" color="#E67E22" count={officers.filter(o=>!o.coordinator_id).length}/>
+        <SectionTitle label="Unassigned Social Workers" color="#E67E22" count={officers.filter(o=>!o.coordinator_id).length}/>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
           {officers.filter(o=>!o.coordinator_id).map(u=><PersonCard key={u.id} u={u}/>)}
         </div>
@@ -2207,7 +2207,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       {/* App Information */}
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.9.2"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Live"],["Version","2.9.3"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
