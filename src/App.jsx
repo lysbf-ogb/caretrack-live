@@ -361,10 +361,10 @@ function Sidebar({user,page,setPage,onLogout,logoUrl,isOpen,onToggle}){
         <NI label="Activity Planner" icon="📅" p="planner"/>
         {user.role!=="Management"&&<NI label="Posts" icon="💬" p="posts"/>}
         <NI label="My Account" icon="👤" p="my-account"/>
-        {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="About" icon="ℹ️" p="settings"/></>}
+        {user.role==="Admin"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Admin</div><NI label="User Management" icon="👥" p="users"/><NI label="Beneficiary Management" icon="🗂️" p="ben-mgmt"/><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
         {user.role==="Management"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Management</div><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="Staff Directory" icon="👥" p="staff-directory"/><NI label="About" icon="ℹ️" p="settings"/></>}
-        {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Social Workers" icon="👥" p="my-officers"/><NI label="About" icon="ℹ️" p="settings"/></>}
-        {user.role==="Programme Officer"&&<NI label="About" icon="ℹ️" p="settings"/>}
+        {user.role==="Programme Coordinator"&&<><div style={{margin:"14px 0 6px",padding:"0 14px",fontSize:10,color:"rgba(255,255,255,0.40)",letterSpacing:2,textTransform:"uppercase",whiteSpace:"nowrap"}}>Coordinator</div><NI label="My Social Workers" icon="👥" p="my-officers"/><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
+        {user.role==="Programme Officer"&&<><NI label="Org Structure" icon="🏢" p="org-structure"/><NI label="About" icon="ℹ️" p="settings"/></>}
       </div>
       <div style={{padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.15)"}}><div style={{display:"flex",alignItems:"center",gap:10}}><div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:"#fff",flexShrink:0}}>{user.avatar}</div><div style={{flex:1,minWidth:0}}><div style={{color:"#fff",fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:10,color:"rgba(255,255,255,0.7)",background:"rgba(0,0,0,0.18)",padding:"2px 8px",borderRadius:20,display:"inline-block",marginTop:2,whiteSpace:"nowrap"}}>{user.role}</div></div><span onClick={onLogout} style={{color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:18,flexShrink:0}}>⇠</span></div></div>
     </div>
@@ -705,7 +705,7 @@ function FollowUpsTab({ben,user,users,onAddPost}){
           await createNotification(
             ben.assigned_to,"comment",
             `Comment on ${ben.name}'s case`,
-            `${user.name} (${user.role}) commented: ${preview}`,
+            `${user.name} (${roleDisplay(user.role)}) commented: ${preview}`,
             ben.id,postId
           );
         }
@@ -1326,7 +1326,7 @@ function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
           {(!ben.posts||ben.posts.length===0)?<div style={{color:T.grey,fontSize:13}}>No follow-up notes recorded.</div>:(ben.posts||[]).map((p,i)=>(<div key={i} style={{marginBottom:12,padding:"10px 14px",background:T.off,borderRadius:8,borderLeft:"3px solid #27AE60"}}><div style={{fontSize:11,color:T.grey,marginBottom:4}}>Date: {p.visit_date||p.date} | Officer: {p.author}{p.visit_type&&<span style={{marginLeft:8,fontWeight:700}}>[{p.visit_type}]</span>}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{p.text}</div></div>))}
         </div>
         <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${T.greyM}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
-          {["Prepared by (Programme Officer)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
+          {["Prepared by (Social Worker)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
         </div>
         <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>LYSBF CYEP · Confidential · {today()}</div>
       </div>
@@ -1808,7 +1808,7 @@ function ActivityPlanner({user,users,initialTarget,onClearTarget,onToggle,onNavi
       await createNotification(
         viewUserId,"plan",
         `New instruction on your plan`,
-        `${user.name} (${user.role}) added a note to your plan for ${dateStr}: "${text.slice(0,60)}${text.length>60?"...":""}"`,
+        `${user.name} (${roleDisplay(user.role)}) added a note to your plan for ${dateStr}: "${text.slice(0,60)}${text.length>60?"...":""}"`,
         null,user.id
       );
     }
@@ -2105,9 +2105,9 @@ function OrgStructure({user,users,bens,onToggle,onNavigateToBen}){
 function StaffDirectory({user,users,bens,onToggle,onNavigateToBen}){
   const [roleF,setRoleF]=useState("All");
   const [statusF,setStatusF]=useState("Active");
-  const roles=["All","Admin","Management","Programme Coordinator","Programme Officer"];
+  const roles=["All","Admin","Management","Programme Coordinator","Social Worker"];
   const filtered=users
-    .filter(u=>roleF==="All"||u.role===roleF)
+    .filter(u=>roleF==="All"||(roleF==="Social Worker"?u.role==="Programme Officer":u.role===roleF))
     .filter(u=>statusF==="All"||(statusF==="Active"?u.status!=="Inactive":u.status==="Inactive"))
     .sort((a,b)=>a.name.localeCompare(b.name));
 
@@ -2207,7 +2207,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       {/* App Information */}
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.9.1"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Live"],["Version","2.9.2"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -2482,7 +2482,7 @@ export default function App(){
     if(page==="users"&&user.role==="Admin")return <UserMgmt users={users} setUsers={setUsers} user={user} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="ben-mgmt"&&user.role==="Admin")return <BenMgmt bens={bens} setBens={setBens} user={user} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="settings")return <Settings logoUrl={logoUrl} setLogoUrl={setLogoUrl} user={user} users={users} setUsers={setUsers} onToggle={tog} onNavigateToBen={navBen}/>;
-    if(page==="org-structure"&&user.role==="Management")return <OrgStructure user={user} users={users} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
+    if(page==="org-structure")return <OrgStructure user={user} users={users} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="staff-directory"&&user.role==="Management")return <StaffDirectory user={user} users={users} bens={bens} onToggle={tog} onNavigateToBen={navBen}/>;
     if(page==="planner")return <ActivityPlanner user={user} users={users} initialTarget={plannerTarget} onClearTarget={()=>setPlannerTarget(null)} onToggle={tog} onNavigateToBen={navBen}/>;
     return <Dashboard bens={bens} user={user} onNavigate={(p,filter)=>nav(p,filter||{})} onToggle={tog} onNavigateToBen={navBen}/>;
