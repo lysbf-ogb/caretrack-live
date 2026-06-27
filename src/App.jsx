@@ -987,7 +987,7 @@ function Profile({ben,user,users,onBack,onAddPost,onSIR,onPhotoUpdate,onToggle,o
             {tab==="programme"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Beneficiary ID",localBen.bid],["Department",`${comp?.icon} ${comp?.name}`],["Enrolment Date",localBen.enroll_date],["Status",localBen.status]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="health"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Vulnerability on Arrival",localBen.vuln_on_arrival],["Health Status",localBen.health],["Height",localBen.height],["Weight",localBen.weight],["Ghana Card / NHIS",localBen.ghana_card],["Disability",localBen.disability],["Medical Condition",localBen.med_condition]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="education"&&<div><Lbl c="Educational Level"/><FBox v={localBen.education}/></div>}
-            {tab==="family"&&<div><Lbl c="Family Background"/><FBox v={localBen.family}/></div>}
+            {tab==="family"&&<FamilyTab ben={localBen} user={user} users={users}/>}
             {tab==="employment"&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>{[["Occupation",localBen.occupation],["Employment Status",localBen.employment]].map(([l,v])=><div key={l}><Lbl c={l}/><FBox v={v}/></div>)}</div>}
             {tab==="disability"&&<div><Lbl c="Disability Status"/><FBox v={localBen.disability}/></div>}
             {tab==="movement"&&<MovementHistoryTab ben={localBen} user={user} users={users} comp={comp}/>}
@@ -1420,41 +1420,237 @@ function DocumentsTab({ben,user}){
   </div>);
 }
 
+function FamilyTab({ben,user,users}){
+  const [sirNotes,setSirNotes]=useState({source_of_info:"",swot_strength:"",swot_weakness:"",swot_opportunity:"",swot_threats:"",recommendation:""});
+  const [saving,setSaving]=useState(false);
+  const [msg,setMsg]=useState("");
+  const canEdit=user.role==="Admin"||user.role==="Programme Coordinator"||user.id===ben.assigned_to;
+
+  useEffect(()=>{loadSirNotes();},[ben.id]);
+
+  async function loadSirNotes(){
+    const{data}=await supabase.from("sir_notes").select("*").eq("beneficiary_id",ben.id).single();
+    if(data)setSirNotes({
+      source_of_info:data.source_of_info||"",
+      swot_strength:data.swot_strength||"",
+      swot_weakness:data.swot_weakness||"",
+      swot_opportunity:data.swot_opportunity||"",
+      swot_threats:data.swot_threats||"",
+      recommendation:data.recommendation||""
+    });
+  }
+
+  async function saveSirNotes(){
+    setSaving(true);
+    const payload={beneficiary_id:ben.id,...sirNotes,updated_at:new Date().toISOString()};
+    const{error}=await supabase.from("sir_notes").upsert(payload,{onConflict:"beneficiary_id"});
+    if(error)setMsg("❌ Error saving: "+error.message);
+    else{setMsg("✅ SIR notes saved successfully.");setTimeout(()=>setMsg(""),3000);}
+    setSaving(false);
+  }
+
+  const TA=({label,field,placeholder})=>(<div style={{marginBottom:16}}>
+    <div style={{fontSize:11,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.8,marginBottom:6}}>{label}</div>
+    {canEdit
+      ?<textarea value={sirNotes[field]||""} onChange={e=>setSirNotes(n=>({...n,[field]:e.target.value}))} placeholder={placeholder||""} spellCheck="true" rows={3} style={{width:"100%",border:`1px solid ${T.greyM}`,borderRadius:8,padding:"9px 13px",fontSize:13,fontFamily:"'Source Sans 3',sans-serif",color:T.navy,resize:"vertical",lineHeight:1.5}}/>
+      :<div style={{fontSize:13,color:T.navy,lineHeight:1.7,padding:"10px 14px",background:T.off,borderRadius:8,minHeight:48}}>{sirNotes[field]||"—"}</div>
+    }
+  </div>);
+
+  return(<div>
+    {/* Existing Family Background */}
+    <div style={{marginBottom:20}}>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:T.navy,marginBottom:10,borderLeft:"4px solid #27AE60",paddingLeft:10}}>Family Background</div>
+      <FBox v={ben.family}/>
+    </div>
+
+    {/* Parent Information */}
+    <div style={{background:"#fff",borderRadius:10,padding:"16px 20px",marginBottom:16,border:`1px solid ${T.greyL}`}}>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:T.navy,marginBottom:14,borderLeft:"4px solid #2980B9",paddingLeft:10}}>Parent / Guardian Information</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Mother's Name</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.mother_name||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Mother's Occupation</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.mother_occupation||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Mother's Address</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.mother_address||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Mother's Contact</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.mother_contact||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Father's Name</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.father_name||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Father's Occupation</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.father_occupation||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Father's Address</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.father_address||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Father's Contact</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.father_contact||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Number of Siblings</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.num_siblings||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Number of Dependants</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.num_dependants||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Daily Household Expenditure</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.daily_expenditure||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Who Does Child Live With</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.lives_with||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Caregiver's Name</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.caregiver_name||"—"}</div></div>
+        <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Caregiver's Contact</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{ben.caregiver_contact||"—"}</div></div>
+      </div>
+      <div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>Home Condition / Living Arrangement</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6,padding:"10px 14px",background:T.off,borderRadius:8}}>{ben.home_condition||"—"}</div></div>
+    </div>
+
+    {/* SIR Notes Section */}
+    <div style={{background:"#fff",borderRadius:10,padding:"16px 20px",border:`1px solid ${T.greyL}`}}>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:T.navy,marginBottom:4,borderLeft:"4px solid #E74C3C",paddingLeft:10}}>SIR Notes</div>
+      <div style={{fontSize:11,color:T.grey,marginBottom:16}}>These notes appear on the Social Investigation Report submitted to Social Welfare.</div>
+
+      <TA label="Source of Information" field="source_of_info" placeholder="To enable me to write this report, I interviewed the following people: ..."/>
+
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:13,fontWeight:700,color:T.navy,margin:"16px 0 12px",borderBottom:`1px solid ${T.greyL}`,paddingBottom:8}}>SWOT Analysis</div>
+      <TA label="Strength" field="swot_strength" placeholder="Describe the client's strengths..."/>
+      <TA label="Weakness" field="swot_weakness" placeholder="Describe the client's weaknesses..."/>
+      <TA label="Opportunity" field="swot_opportunity" placeholder="Describe opportunities available to the client..."/>
+      <TA label="Threats" field="swot_threats" placeholder="Describe threats facing the client..."/>
+
+      <TA label="Recommendation / Nature of Support" field="recommendation" placeholder="Describe the recommended support and which department the client will be referred to..."/>
+
+      {msg&&<div style={{background:msg.includes("✅")?"#EAFAF1":"#FDEDEC",color:msg.includes("✅")?"#1D8348":"#C0392B",borderRadius:8,padding:"8px 12px",fontSize:12,marginBottom:12}}>{msg}</div>}
+      {canEdit&&<Btn variant="primary" onClick={saveSirNotes}>{saving?"Saving...":"💾 Save SIR Notes"}</Btn>}
+    </div>
+  </div>);
+}
+
 function SIRView({ben,user,users,onBack,onToggle,onNavigateToBen}){
-  if(!ben)return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Inquiry Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
+  const [sirNotes,setSirNotes]=useState(null);
+  useEffect(()=>{
+    if(!ben)return;
+    supabase.from("sir_notes").select("*").eq("beneficiary_id",ben.id).single().then(({data})=>{if(data)setSirNotes(data);});
+  },[ben?.id]);
+
+  if(!ben)return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Investigation Reports" sub="Formal case assessment reports"/><div style={{padding:"32px",textAlign:"center",color:T.grey}}><div style={{fontSize:48,marginBottom:12}}>📝</div><div style={{fontSize:16,fontWeight:700,color:T.navy}}>Select a beneficiary and click Generate SIR.</div></div></div>);
+
   const comp=COMPONENTS.find(c=>c.id===ben.component_id);
   const officer=users.find(u=>u.id===ben.assigned_to);
-  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Inquiry Report" sub={`${ben.name} · ${ben.bid}`}/>
+  const coord=officer?users.find(u=>u.id===officer.coordinator_id):null;
+
+  function SIRSection({num,title,children}){
+    return(<div style={{marginBottom:24}}>
+      <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,fontWeight:700,color:T.navy,borderLeft:"4px solid #27AE60",paddingLeft:12,marginBottom:14,paddingTop:2}}>{num}. {title}</div>
+      {children}
+    </div>);
+  }
+  function SIRField({label,value}){
+    return(<div><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>{label}</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:6,marginBottom:8,minHeight:22}}>{value||"—"}</div></div>);
+  }
+  function SIRText({label,value}){
+    return(<div style={{marginBottom:14}}>
+      {label&&<div style={{fontSize:11,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{label}</div>}
+      <div style={{fontSize:13,color:T.navy,lineHeight:1.7,padding:"10px 14px",background:T.off,borderRadius:8,minHeight:40}}>{value||"—"}</div>
+    </div>);
+  }
+  function SWOTBox({label,value,color}){
+    return(<div style={{background:"#fff",border:`1px solid ${T.greyL}`,borderRadius:8,padding:"12px 14px",marginBottom:10}}>
+      <div style={{fontSize:11,fontWeight:700,color:color,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>{label}</div>
+      <div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{value||"—"}</div>
+    </div>);
+  }
+
+  return(<div className="fade-in"><Topbar user={user} onNavigateToBen={onNavigateToBen} onToggle={onToggle} title="Social Investigation Report" sub={`${ben.name} · ${ben.bid}`}/>
     <div style={{padding:"24px 32px"}}>
-      <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}><Btn variant="secondary" onClick={onBack}>← Back</Btn><Btn variant="navy" onClick={()=>window.print()}>🖨 Print as PDF</Btn></div>
+      <div className="no-print" style={{display:"flex",gap:10,marginBottom:20}}>
+        <Btn variant="secondary" onClick={onBack}>← Back</Btn>
+        <Btn variant="navy" onClick={()=>window.print()}>🖨 Print as PDF</Btn>
+      </div>
       <div style={{background:"#fff",borderRadius:12,padding:"36px 40px",boxShadow:"0 2px 12px rgba(0,0,0,0.08)",maxWidth:800,margin:"0 auto"}}>
+
+        {/* Header */}
         <div style={{textAlign:"center",borderBottom:`2px solid ${T.navy}`,paddingBottom:20,marginBottom:24}}>
           {ben.photo_url&&<img src={ben.photo_url} alt={ben.name} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.navy}`,marginBottom:12,display:"block",margin:"0 auto 12px"}}/>}
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:T.navy}}>LAWYER YAW SARPONG BOATENG FOUNDATION</div>
-          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Community Youth Empowerment Programme (CYEP)</div>
-          <div style={{fontSize:16,fontWeight:700,color:"#27AE60",marginTop:10,textTransform:"uppercase",letterSpacing:2}}>Social Inquiry Report</div>
-          <div style={{fontSize:12,color:T.grey,marginTop:4}}>Confidential Document — For Official Use Only</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:T.navy}}>CARETRACK GHANA</div>
+          <div style={{fontSize:13,color:T.slate,marginTop:4}}>Sample Programme Component</div>
+          <div style={{fontSize:15,fontWeight:700,color:"#C0392B",marginTop:10,textTransform:"uppercase",letterSpacing:2}}>Social Investigation Report</div>
+          <div style={{fontSize:12,fontWeight:700,color:T.navy,marginTop:4}}>On A Child In Need Of Protection</div>
+          <div style={{fontSize:11,color:T.grey,marginTop:6}}>Confidential Document — For Official Use Only</div>
         </div>
+
+        {/* Report meta */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:24,padding:"12px 16px",background:T.off,borderRadius:8}}>
-          {[["Report Date",today()],["Beneficiary ID",ben.bid],["Department",`${comp?.icon} ${comp?.name}`],["Social Worker",officer?.name||"—"],["Status",ben.status],["Enrolled",ben.enroll_date]].map(([l,v])=>(<div key={l} style={{fontSize:12}}><span style={{color:T.grey,fontWeight:700}}>{l}: </span><span style={{color:T.navy}}>{v}</span></div>))}
+          {[["Report Date",today()],["Beneficiary ID",ben.bid],["Department",`${comp?.icon||""} ${comp?.fullName||comp?.name||"—"}`],["Social Worker",officer?.name||"—"],["Coordinator",coord?.name||"—"],["Status",ben.status]].map(([l,v])=>(<div key={l} style={{fontSize:12}}><span style={{color:T.grey,fontWeight:700}}>{l}: </span><span style={{color:T.navy}}>{v}</span></div>))}
         </div>
-        {[{title:"1. Basic Demographic Information",fields:[["Full Name",ben.name],["Date of Birth",ben.dob],["Age",ben.age],["Gender",ben.gender],["Nationality",ben.nationality],["Tribe / Ethnicity",ben.tribe],["Religion",ben.religion],["Region",ben.region],["District",ben.district],["City / Village",ben.city],["Area / Suburb",ben.area],["Physical Location",ben.physical_desc]]},
-          {title:"2. Family Background",single:ben.family},{title:"3. Background Information",single:ben.background},
-          {title:"4. Education & Employment",fields:[["Education Level",ben.education],["Occupation",ben.occupation],["Employment Status",ben.employment]]},
-          {title:"5. Health Information",fields:[["Vulnerability on Arrival",ben.vuln_on_arrival],["Health Status",ben.health],["Height",ben.height],["Weight",ben.weight],["Ghana Card / NHIS",ben.ghana_card],["Disability",ben.disability],["Medical Condition",ben.med_condition]]}
-        ].map(sec=>(<div key={sec.title} style={{marginBottom:24}}>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.navy,borderLeft:"4px solid #27AE60",paddingLeft:12,marginBottom:14}}>{sec.title}</div>
-          {sec.single&&<div style={{fontSize:13,color:T.navy,lineHeight:1.7,padding:"12px 16px",background:T.off,borderRadius:8}}>{sec.single||"—"}</div>}
-          {sec.fields&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>{sec.fields.map(([l,v])=>(<div key={l}><div style={{fontSize:10,fontWeight:700,color:T.grey,textTransform:"uppercase",letterSpacing:0.6,marginBottom:3}}>{l}</div><div style={{fontSize:13,color:T.navy,borderBottom:`1px solid ${T.greyL}`,paddingBottom:4}}>{v||"—"}</div></div>))}</div>}
-        </div>))}
-        <div style={{marginBottom:24}}>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:700,color:T.navy,borderLeft:"4px solid #27AE60",paddingLeft:12,marginBottom:14}}>6. Follow-Up Notes</div>
-          {(!ben.posts||ben.posts.length===0)?<div style={{color:T.grey,fontSize:13}}>No follow-up notes recorded.</div>:(ben.posts||[]).map((p,i)=>(<div key={i} style={{marginBottom:12,padding:"10px 14px",background:T.off,borderRadius:8,borderLeft:"3px solid #27AE60"}}><div style={{fontSize:11,color:T.grey,marginBottom:4}}>Date: {p.visit_date||p.date} | Officer: {p.author}{p.visit_type&&<span style={{marginLeft:8,fontWeight:700}}>[{p.visit_type}]</span>}</div><div style={{fontSize:13,color:T.navy,lineHeight:1.6}}>{p.text}</div></div>))}
-        </div>
+
+        {/* Section 1 — Biodata */}
+        <SIRSection num="1" title="Biodata of Client">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <SIRField label="Full Name" value={ben.name}/>
+            <SIRField label="Date of Birth" value={ben.dob}/>
+            <SIRField label="Age" value={ben.age}/>
+            <SIRField label="Gender" value={ben.gender}/>
+            <SIRField label="Place of Birth" value={ben.city}/>
+            <SIRField label="Home Town" value={ben.community}/>
+            <SIRField label="Nationality" value={ben.nationality}/>
+            <SIRField label="Tribe / Ethnicity" value={ben.tribe}/>
+            <SIRField label="Religion" value={ben.religion}/>
+            <SIRField label="Ghana Card / NHIS" value={ben.ghana_card}/>
+            <SIRField label="Region" value={ben.region}/>
+            <SIRField label="District" value={ben.district}/>
+          </div>
+        </SIRSection>
+
+        {/* Section 2 — Parent/Guardian Information */}
+        <SIRSection num="2" title="Parent / Guardian Information">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <SIRField label="Mother's Name" value={ben.mother_name}/>
+            <SIRField label="Mother's Occupation" value={ben.mother_occupation}/>
+            <SIRField label="Mother's Residential Address" value={ben.mother_address}/>
+            <SIRField label="Mother's Contact Number(s)" value={ben.mother_contact}/>
+            <SIRField label="Father's Name" value={ben.father_name}/>
+            <SIRField label="Father's Occupation" value={ben.father_occupation}/>
+            <SIRField label="Father's Residential Address" value={ben.father_address}/>
+            <SIRField label="Father's Contact Number(s)" value={ben.father_contact}/>
+            <SIRField label="Number of Siblings" value={ben.num_siblings}/>
+            <SIRField label="Number of Dependants" value={ben.num_dependants}/>
+            <SIRField label="Daily Household Expenditure" value={ben.daily_expenditure}/>
+            <SIRField label="Who Does Child Currently Live With" value={ben.lives_with}/>
+            <SIRField label="Caregiver's Name" value={ben.caregiver_name}/>
+            <SIRField label="Caregiver's Contact Number(s)" value={ben.caregiver_contact}/>
+          </div>
+        </SIRSection>
+
+        {/* Section 3 — Home Condition */}
+        <SIRSection num="3" title="Home Condition / Living Arrangement">
+          <SIRText value={ben.home_condition||ben.family}/>
+        </SIRSection>
+
+        {/* Section 4 — Background */}
+        <SIRSection num="4" title="Background Information">
+          <SIRText value={ben.background}/>
+        </SIRSection>
+
+        {/* Section 5 — Education */}
+        <SIRSection num="5" title="Education & Employment">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <SIRField label="Education Level" value={ben.education}/>
+            <SIRField label="Occupation" value={ben.occupation}/>
+            <SIRField label="Employment Status" value={ben.employment}/>
+          </div>
+        </SIRSection>
+
+        {/* Section 6 — Source of Information */}
+        <SIRSection num="6" title="Source of Information">
+          <div style={{fontSize:12,color:T.grey,marginBottom:8,fontStyle:"italic"}}>To enable me to write this report, I interviewed the following people:</div>
+          <SIRText value={sirNotes?.source_of_info}/>
+        </SIRSection>
+
+        {/* Section 7 — SWOT Analysis */}
+        <SIRSection num="7" title="SWOT Analysis">
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <SWOTBox label="Strength" value={sirNotes?.swot_strength} color="#1D8348"/>
+            <SWOTBox label="Weakness" value={sirNotes?.swot_weakness} color="#C0392B"/>
+            <SWOTBox label="Opportunity" value={sirNotes?.swot_opportunity} color="#1A5276"/>
+            <SWOTBox label="Threats" value={sirNotes?.swot_threats} color="#9A7D0A"/>
+          </div>
+        </SIRSection>
+
+        {/* Section 8 — Recommendation */}
+        <SIRSection num="8" title="Recommendation / Nature of Support">
+          <SIRText value={sirNotes?.recommendation}/>
+        </SIRSection>
+
+        {/* Signature block */}
         <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${T.greyM}`,display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
-          {["Prepared by (Social Worker)","Verified by (Coordinator)"].map(l=>(<div key={l}><div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div><div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div></div>))}
+          {["Prepared by (Social Worker)","Verified by (Coordinator)"].map(l=>(<div key={l}>
+            <div style={{fontSize:11,color:T.grey,marginBottom:24}}>{l}</div>
+            <div style={{borderTop:`1px solid ${T.navy}`,paddingTop:6,fontSize:11,color:T.grey}}>Signature & Date</div>
+          </div>))}
         </div>
-        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>LYSBF CYEP · Confidential · {today()}</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:10,color:T.grey}}>CareTrack Ghana · Confidential · {today()}</div>
       </div>
     </div>
   </div>);
@@ -1486,7 +1682,7 @@ function AutoInput({label,value,onChange,suggestions,placeholder,full}){
 }
 
 function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,communitySuggestions,districtSuggestions,citySuggestions}){
-  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"",district:"",city:"",area:"",physical_desc:"",address:"",community:"",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",assigned_to:user.id,coordinator_id:user.role==="Programme Coordinator"?user.id:null,enroll_date:today()};
+  const blank={bid:"",name:"",age:"",gender:"Male",dob:"",nationality:"Ghanaian",tribe:"",religion:"Christian",region:"",district:"",city:"",area:"",physical_desc:"",address:"",community:"",occupation:"",employment:"Unemployed",education:"SHS",component_id:1,status:"Active",disability:"N/A",vuln_on_arrival:"No",height:"",weight:"",ghana_card:"",med_condition:"None",health:"Good",family:"",background:"",home_condition:"",mother_name:"",mother_occupation:"",mother_address:"",mother_contact:"",father_name:"",father_occupation:"",father_address:"",father_contact:"",num_siblings:"",num_dependants:"",daily_expenditure:"",lives_with:"",caregiver_name:"",caregiver_contact:"",assigned_to:user.id,coordinator_id:user.role==="Programme Coordinator"?user.id:null,enroll_date:today()};
   const [f,setF]=useState(edit?{...edit}:blank);const [busy,setBusy]=useState(false);
   const s=(k,v)=>setF(p=>({...p,[k]:v}));
   function handleDob(dob){const age=dob?Math.floor((new Date()-new Date(dob))/(365.25*24*60*60*1000)):null;setF(p=>({...p,dob,age:age&&age>0?String(age):p.age}));}
@@ -1538,11 +1734,29 @@ function BenForm({user,edit,users,onSave,onCancel,onToggle,onNavigateToBen,commu
           <FI label="Employment Status" value={f.employment} onChange={v=>s("employment",v)} options={["Employed","Unemployed"]}/>
         </div>
         <SH>Family & Background</SH>
-        <div style={{display:"grid",gridTemplateColumns:"1fr",gap:16,marginBottom:28}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr",gap:16,marginBottom:16}}>
           <FI label="Family Background" value={f.family} onChange={v=>s("family",v)} type="textarea"/>
           <FI label="Background Information" value={f.background} onChange={v=>s("background",v)} type="textarea"/>
+          <FI label="Home Condition / Living Arrangement" value={f.home_condition} onChange={v=>s("home_condition",v)} type="textarea"/>
         </div>
-        <div style={{display:"flex",gap:12}}>
+        <SH>Parent / Guardian Information</SH>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+          <FI label="Mother's Name" value={f.mother_name} onChange={v=>s("mother_name",v)}/>
+          <FI label="Mother's Occupation" value={f.mother_occupation} onChange={v=>s("mother_occupation",v)}/>
+          <FI label="Mother's Residential Address" value={f.mother_address} onChange={v=>s("mother_address",v)}/>
+          <FI label="Mother's Contact Number(s)" value={f.mother_contact} onChange={v=>s("mother_contact",v)}/>
+          <FI label="Father's Name" value={f.father_name} onChange={v=>s("father_name",v)}/>
+          <FI label="Father's Occupation" value={f.father_occupation} onChange={v=>s("father_occupation",v)}/>
+          <FI label="Father's Residential Address" value={f.father_address} onChange={v=>s("father_address",v)}/>
+          <FI label="Father's Contact Number(s)" value={f.father_contact} onChange={v=>s("father_contact",v)}/>
+          <FI label="Number of Siblings" value={f.num_siblings} onChange={v=>s("num_siblings",v)}/>
+          <FI label="Number of Dependants on Main Breadwinner" value={f.num_dependants} onChange={v=>s("num_dependants",v)}/>
+          <FI label="Daily Household Expenditure (GHS)" value={f.daily_expenditure} onChange={v=>s("daily_expenditure",v)}/>
+          <FI label="Who Does Child Currently Live With?" value={f.lives_with} onChange={v=>s("lives_with",v)}/>
+          <FI label="Caregiver's Name" value={f.caregiver_name} onChange={v=>s("caregiver_name",v)}/>
+          <FI label="Caregiver's Contact Number(s)" value={f.caregiver_contact} onChange={v=>s("caregiver_contact",v)}/>
+        </div>
+        <div style={{display:"flex",gap:12,marginTop:8}}>
           <Btn variant="primary" style={{opacity:busy?0.6:1}} onClick={async()=>{if(!f.name.trim())return;setBusy(true);await onSave(f);setBusy(false);}}>{busy?"Saving...":edit?"Save Changes":"Register Beneficiary"}</Btn>
           <Btn variant="secondary" onClick={onCancel}>Cancel</Btn>
         </div>
@@ -2333,7 +2547,7 @@ function Settings({logoUrl,setLogoUrl,user,users,setUsers,onToggle,onNavigateToB
       {/* App Information */}
       <div style={{background:"#fff",borderRadius:12,padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,0.06)",gridColumn:"1/-1"}}>
         <SH>App Information</SH>
-        {[["App Name","CareTrack Live"],["Version","2.9.4"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
+        {[["App Name","CareTrack Live"],["Version","2.9.5"],["Organisation","CareTrack Ghana"],["Region","Ghana"],["Contact","info@caretrackghana.com"],["Phone","+233 055 320 8451"]].map(([l,v])=>(<div key={l} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:`1px solid ${T.greyL}`}}><span style={{fontSize:12,color:T.grey,fontWeight:700}}>{l}</span><span style={{fontSize:12,color:T.navy}}>{v}</span></div>))}
       </div>
     </div>
   </div>);
@@ -2514,7 +2728,7 @@ export default function App(){
   }
 
   async function saveBen(f){
-    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,assigned_to:f.assigned_to||user.id,coordinator_id:f.coordinator_id||null,enroll_date:f.enroll_date||today()};
+    const payload={bid:f.bid,name:f.name,age:Number(f.age)||null,gender:f.gender,dob:f.dob||null,nationality:f.nationality,tribe:f.tribe,religion:f.religion,region:f.region,district:f.district,city:f.city,area:f.area,physical_desc:f.physical_desc,address:f.address,community:f.community,occupation:f.occupation,employment:f.employment,education:f.education,component_id:Number(f.component_id),status:f.status,disability:f.disability,vuln_on_arrival:f.vuln_on_arrival,height:f.height,weight:f.weight,ghana_card:f.ghana_card,med_condition:f.med_condition,health:f.health,family:f.family,background:f.background,home_condition:f.home_condition||null,mother_name:f.mother_name||null,mother_occupation:f.mother_occupation||null,mother_address:f.mother_address||null,mother_contact:f.mother_contact||null,father_name:f.father_name||null,father_occupation:f.father_occupation||null,father_address:f.father_address||null,father_contact:f.father_contact||null,num_siblings:f.num_siblings||null,num_dependants:f.num_dependants||null,daily_expenditure:f.daily_expenditure||null,lives_with:f.lives_with||null,caregiver_name:f.caregiver_name||null,caregiver_contact:f.caregiver_contact||null,assigned_to:f.assigned_to||user.id,coordinator_id:f.coordinator_id||null,enroll_date:f.enroll_date||today()};
     try{
       if(editBen){
         const{data,error}=await supabase.from("beneficiaries").update(payload).eq("id",editBen.id).select().single();
