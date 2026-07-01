@@ -1,4 +1,5 @@
 /* eslint-disable */
+console.log("%c================================\nCareTrack Ghana\n👨‍💻 Built by Mark Effah Yeboah\n© 2026 CareTrack Ghana. All rights reserved.\n📧 info@caretrackghana.com\n📞 +233 055 320 8451\n🌐 caretrackghana.com\n================================","color:#27AE60;font-weight:bold;font-size:13px;");
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
